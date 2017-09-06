@@ -469,8 +469,29 @@ def format_bg(file_id):
 
     # Delete formatting template sheet
     result = service.spreadsheets().batchUpdate(spreadsheetId=file_id, body={'requests': [{'deleteSheet': {'sheetId': s_id_template}}]}).execute()
-   
+
+def get_bg(year, mo):
+
+    ##############################################################
+    folder_id = '0B71ox_2Qc7gmWkNWM21YUU9MSEU'
+    ##############################################################
+
+    months_dict = {1: 'January', 2: 'Febuary', 3: 'March', 4: 'April', 5: 'May', 6: 'June',
+                   7: 'July', 8: 'August', 9: 'September', 10: 'October', 11: 'November', 12: 'December'}
+
+    ss_name = months_dict[mo] + ' ' + str(year) + ' Billing Grid'
+    ss_id = gdrive_get_file_id_by_name(ss_name, folder_id)
+
+    # Make a request to Google Sheet
+    service = get_gsheet_service()
+    result = service.spreadsheets().values().get(
+        spreadsheetId=ss_id, range='BG', valueRenderOption='UNFORMATTED_VALUE').execute()
+    values = result.get('values', [])
+
+    df = pd.DataFrame(values[1: len(values) - 1], columns=values[0])  # Exclude the last row (Grand Total)
+    return df   
  
+
 ##############################################################
 # Ask.com TP
 ##############################################################
@@ -823,5 +844,466 @@ def format_ask_tp(file_id):
 
     requests = move + pivt
     result = service.spreadsheets().batchUpdate(spreadsheetId=file_id, body={'requests': requests}).execute()
+
+##############################################################
+# Site Report
+##############################################################
+
+def make_site_report_as_excel(year, mo, prefix4output):
+
+    ##############################################################
+    # Output file name
+    ##############################################################
+
+    today_date = datetime.now().date()
+    today_date_str = str(today_date.month).zfill(2) + str(today_date.day).zfill(2) + str(today_date.year)
+
+    months_dict = {1: 'January', 2: 'Febuary', 3: 'March', 4: 'April', 5: 'May', 6: 'June',
+                   7: 'July', 8: 'August', 9: 'September', 10: 'October', 11: 'November', 12: 'December'}
+
+    output_file_name = prefix4output + '_' + months_dict[mo] + '_' + str(year) + '_Site_Report_' + today_date_str + '.xlsx'
+
+    ##############################################################
+    # Get data
+    ##############################################################
+
+    DIR_PICKLES = PATH2PICKLES + '/' + PREFIX4ALWAYS_UP2DATE + str(year) + '_' + str(mo).zfill(2)
+
+    with open(DIR_PICKLES + '/' + 'all1.pickle', 'rb') as f:
+        all1 = pickle.load(f)
+
+    with open(DIR_PICKLES + '/' + 'site_goals.pickle', 'rb') as f:
+        site_goals = pickle.load(f)
+
+    bg = get_bg(year, mo)
+
+    ##############################################################
+    # Prep
+    ##############################################################
+
+    bbd_list = ['BBR', 'Brand', 'DAS Line Item Name']
+
+    ##############################################################
+    # Get adjusted (estimated 3rd party) impressions per site
+    ##############################################################
+
+    # Extract CPM and CPUV data from the 'all1' file. Aggregate the data.
+    data = all1[(all1['Price Calculation Type'] == 'CPM') | (all1['Price Calculation Type'] == 'CPUV')]
+    data.loc[pd.isnull(data['(DAS)BBR #']), '(DAS)BBR #'] = data.loc[pd.isnull(data['(DAS)BBR #']), '(Order)BBR #']
+    data = data[['(DAS)BBR #', 'Brand', 'DAS Line Item Name', 'Site', 'Price Calculation Type', 'Impressions/UVs', 'Clicks']]
+    data = data.rename(columns={'(DAS)BBR #': 'BBR', 'Impressions/UVs': 'Delivered'})
+    data = data.groupby(bbd_list+['Site', 'Price Calculation Type']).sum().reset_index()
+
+    # Add Discrepancy from BG
+    bg_discrepancy = bg[['Advertiser', 'Placement', 'Discrepancy', 'BBR']]
+    bg_discrepancy = bg_discrepancy.rename(columns={'Advertiser': 'Brand', 'Placement': 'DAS Line Item Name'})
+    data = pd.merge(data, bg_discrepancy, how='left', on=bbd_list)
+
+    # If Discrepancy is less than or equal to 5%, partners get paid for all they delivered
+    # If Discrepancy is greater than 5%, partners get paid for all minus the discrepancy
+    # For DSP, let 'Adjusted w/Discrepancy' = 'Delivered' regardless of Discrepancy
+    data.loc[[isinstance(d, str) for d in data['Discrepancy']], 'Discrepancy'] = 0
+    data.loc[data['Discrepancy'] == 1, 'Discrepancy'] = 0
+
+    data['Adjusted w/ Discrepancy'] = data['Delivered'] * (1 - data['Discrepancy'])
+    data.loc[data['Discrepancy'] <= 0.05, 'Adjusted w/ Discrepancy'] = data.loc[data['Discrepancy'] <= 0.05, 'Delivered']
+    data.loc[pd.isnull(data['Discrepancy']), 'Adjusted w/ Discrepancy'] = data.loc[pd.isnull(data['Discrepancy']), 'Delivered']
+    data['Adjusted w/ Discrepancy'] = [round(a_w_d, 0) for a_w_d in data['Adjusted w/ Discrepancy']]
+
+    ##############################################################
+    # Add site goals
+    ##############################################################
+
+    data = pd.merge(data, site_goals[bbd_list + ['Site', 'Site Goal']],
+                    how='left', on=bbd_list+['Site'])
+    data.loc[pd.isnull(data['Site Goal']), 'Site Goal'] = 0
+
+    ##############################################################
+    # HL & MNT delivery
+    ##############################################################
+
+    mnt = data[data['Site'] == 'Medical News Today']
+    mnt = mnt[bbd_list + ['Adjusted w/ Discrepancy']]
+    mnt = mnt.rename(columns={'Adjusted w/ Discrepancy': 'MNT Delivery'})
+
+    hl = data[data['Site'] == 'HL']
+    hl = hl[bbd_list + ['Adjusted w/ Discrepancy']]
+    hl = hl.rename(columns={'Adjusted w/ Discrepancy': 'HL Delivery'})
+
+    ##############################################################
+    # HW delivery & capped at site goal
+    # Cap EXCEPT FOR Drugs.com CPUV Microsite
+    ##############################################################
+
+    hw_sites = data[(data['Site'] != 'HL') & (data['Site'] != 'Medical News Today')]
+
+    def cap_hw_delivery(row):
+        if (row['Site'] == 'Drugs.com') & (row['Price Calculation Type'] == 'CPUV') & \
+                ('Competitive Conquesting' not in row['DAS Line Item Name']):
+            return row['Adjusted w/ Discrepancy']
+        if row['Adjusted w/ Discrepancy'] > row['Site Goal']:
+            return row['Site Goal']
+        else:
+            return row['Adjusted w/ Discrepancy']
+
+    hw_sites['Capped'] = hw_sites.apply(lambda row: cap_hw_delivery(row), axis=1)
+
+    ##############################################################
+    # Calculation dataframe
+    ##############################################################
+
+    # Make
+    calc_df = bg[['Advertiser', 'Placement', 'Billed Units', 'BBR']]
+    calc_df['Billed Units'] = [round(bi, 0) for bi in calc_df['Billed Units']]
+    calc_df = calc_df.rename(columns={'Advertiser': 'Brand',
+                                      'Placement': 'DAS Line Item Name',
+                                      'Billed Units': 'Total Billed'})
+
+    # Add # of HW sites
+    hw_count = data[(data['Site'] != 'HL') & (data['Site'] != 'Medical News Today') & (data['Adjusted w/ Discrepancy'] > 0)]
+    hw_count = hw_count[bbd_list].groupby(bbd_list).size()
+    hw_count = hw_count.reset_index().rename(columns={0: 'HW Count'})
+
+    calc_df = pd.merge(calc_df, hw_count, how='left', on=bbd_list)
+    calc_df.loc[pd.isnull(calc_df['HW Count']), 'HW Count'] = 0
+
+    # Add HW delivery & capped at site goal
+    hw_total = hw_sites[bbd_list + ['Adjusted w/ Discrepancy', 'Capped']]
+    hw_total = hw_total.groupby(bbd_list).sum().reset_index()
+    hw_total = hw_total.rename(columns={'Adjusted w/ Discrepancy': 'HW Delivery', 'Capped': 'HW Capped'})
+
+    calc_df = pd.merge(calc_df, hw_total, how='left', on=bbd_list)
+    calc_df.loc[pd.isnull(calc_df['HW Delivery']), 'HW Delivery'] = 0
+    calc_df.loc[pd.isnull(calc_df['HW Capped']), 'HW Capped'] = 0
+
+    # Add MNT delivery & capped at overall goal
+    calc_df = pd.merge(calc_df, mnt, how='left', on=bbd_list)
+    calc_df.loc[pd.isnull(calc_df['MNT Delivery']), 'MNT Delivery'] = 0
+
+    calc_df['Total Billed - HW Capped'] = calc_df['Total Billed'] - calc_df['HW Capped']
+
+    def fill_mnt_billed(row, hw_col):
+        if row['MNT Delivery'] <= 0:
+            return 0
+        if row['Total Billed - ' + hw_col] < 0:
+            return 0
+        if row['MNT Delivery'] < row['Total Billed - ' + hw_col]:
+            return row['MNT Delivery']
+        return row['Total Billed - ' + hw_col]
+
+    calc_df['MNT Billed'] = calc_df.apply(lambda row: fill_mnt_billed(row, 'HW Capped'), axis=1)
+
+    # Add HL delivery & left billable if HW delivery is capped at site goal
+    calc_df = pd.merge(calc_df, hl, how='left', on=bbd_list)
+    calc_df.loc[pd.isnull(calc_df['HL Delivery']), 'HL Delivery'] = 0
+
+    calc_df['HL Left Billable'] = calc_df['Total Billed'] - calc_df['HW Capped'] - calc_df['MNT Billed']
+
+    # If site-specific, adjust
+    # If HL didn't deliver left billable, adjust
+    calc_df['HL Delivery - HL Left Billable'] = calc_df['HL Delivery'] - calc_df['HL Left Billable']
+
+    def fill_hw_billed(row):
+        if row['HW Count'] == 0:
+            return 0
+        if (row['HW Count'] == 1) & (row['MNT Delivery'] <= 0) & (row['HL Delivery'] <= 0):
+            return row['Total Billed']
+        if row['HL Delivery - HL Left Billable'] >= 0:
+            return row['HW Capped']
+
+        mnt_left_billable = row['MNT Delivery'] - row['MNT Billed']
+        give2hw = -1 * row['HL Delivery - HL Left Billable'] - mnt_left_billable
+        return row['HW Capped'] + give2hw
+
+    calc_df['HW Billed'] = calc_df.apply(lambda row: fill_hw_billed(row), axis=1)
+
+    # Recalculate MNT billed. Final HL billed.
+    calc_df['Total Billed - HW Billed'] = calc_df['Total Billed'] - calc_df['HW Billed']
+    calc_df['MNT Billed'] = calc_df.apply(lambda row: fill_mnt_billed(row, 'HW Billed'), axis=1)
+    calc_df['HL Billed'] = calc_df['Total Billed'] - calc_df['HW Billed'] - calc_df['MNT Billed']
+
+    # Check 1: This should be zero for all rows
+    calc_df['Total Billed - (HW Billed + MNT Billed + HL Billed)'] = calc_df['Total Billed'] - calc_df['HW Billed'] - calc_df['MNT Billed'] - calc_df['HL Billed']
+    # Check 2: If this is negative, look into it
+    calc_df['HL Delivery - HL Billed'] = calc_df['HL Delivery'] - calc_df['HL Billed']
+
+    # Clean up
+    calc_df = calc_df[['BBR', 'Brand', 'DAS Line Item Name',
+                       'Total Billed', 'Total Billed - (HW Billed + MNT Billed + HL Billed)',
+                       'HL Delivery - HL Billed', 'HL Delivery - HL Left Billable',
+                       'HL Delivery', 'HL Billed',
+                       'HW Count', 'HW Delivery', 'HW Capped', 'HW Billed',
+                       'MNT Delivery', 'MNT Billed']]
+
+    # Output
+    calc_df.to_csv('billing_calculation_' + str(year) + '_' + str(mo).zfill(2) + '.csv', index=False)
+
+    ##############################################################
+    # Add billed to data
+    ##############################################################
+
+    # Round 1: Straightforward
+    def fill_in_billed(row):
+        mini_calc_df = calc_df[(calc_df['BBR'] == row['BBR']) &
+                               (calc_df['Brand'] == row['Brand']) &
+                               (calc_df['DAS Line Item Name'] == row['DAS Line Item Name'])]
+
+        if len(mini_calc_df) == 0:
+            return 'Not in BG'
+
+        def value_of(col_in_mini_calc_df):
+            return mini_calc_df[col_in_mini_calc_df].values[0]
+
+        site = row['Site']
+
+        if site == 'HL':
+            return value_of('HL Billed')
+        if site == 'Medical News Today':
+            return value_of('MNT Billed')
+        if (site == 'Drugs.com') & (row['Price Calculation Type'] == 'CPUV') & ('Competitive Conquesting' not in row['DAS Line Item Name']):
+            return row['Adjusted w/ Discrepancy']
+        if value_of('HW Count') == 1:
+            return value_of('HW Billed')
+        if value_of('HW Capped') == value_of('HW Billed'):
+            return min(row['Adjusted w/ Discrepancy'], row['Site Goal'])
+        return 'Check'
+
+    data['Billed'] = data.apply(lambda row: fill_in_billed(row), axis=1)
+
+    # Round 2: If 2 or more HW sites need to be adjusted
+    to_check = data[data['Billed'] == 'Check'].drop_duplicates(bbd_list)
+    for i in range(len(to_check)):
+        mini_to_check = to_check.iloc[i]
+        mini_data = data[(data['BBR'] == mini_to_check['BBR']) &
+                         (data['Brand'] == mini_to_check['Brand']) &
+                         (data['DAS Line Item Name'] == mini_to_check['DAS Line Item Name']) &
+                         (data['Site'] != 'HL') &
+                         (data['Site'] != 'Medical News Today')]
+
+        # If site didn't over-deliver, let billed = delivery
+        mini_data['UD'] = mini_data['Site Goal'] - mini_data['Adjusted w/ Discrepancy']
+        sum_non_od_hw_billed = 0
+        for j in range(len(mini_data)):
+            per_site = mini_data.iloc[j]
+            delivery = per_site['Adjusted w/ Discrepancy']
+            if per_site['UD'] >= 0:
+                data.loc[(data['BBR'] == mini_to_check['BBR']) &
+                         (data['Brand'] == mini_to_check['Brand']) &
+                         (data['DAS Line Item Name'] == mini_to_check['DAS Line Item Name']) &
+                         (data['Site'] == per_site['Site']), 'Billed'] = delivery
+                sum_non_od_hw_billed += delivery
+
+        # If only 1 site over-delivered, let billed = leftover
+        if len(mini_data[mini_data['UD'] < 0]) == 1:
+            site = mini_data[mini_data['UD'] < 0]['Site'].values[0]
+
+            mini_calc_df = calc_df[(calc_df['BBR'] == mini_to_check['BBR']) &
+                                   (calc_df['Brand'] == mini_to_check['Brand']) &
+                                   (calc_df['DAS Line Item Name'] == mini_to_check['DAS Line Item Name'])]
+            hw_billed = mini_calc_df['HW Billed'].values[0]
+
+            hw_od_billed = hw_billed - sum_non_od_hw_billed
+            data.loc[(data['BBR'] == mini_to_check['BBR']) &
+                     (data['Brand'] == mini_to_check['Brand']) &
+                     (data['DAS Line Item Name'] == mini_to_check['DAS Line Item Name']) &
+                     (data['Site'] == site), 'Billed'] = hw_od_billed
+
+    ##############################################################
+    # Add HL rows not in data
+    # Most are to be changed to site = DSP (WWW lines)
+    # Others are non-CPM/CPUV lines, like Flat-fee
+    ##############################################################
+
+    hl_in_data = hl[bbd_list]
+    hl_in_data['HL delivery in all1'] = 1
+
+    calc_df = pd.merge(calc_df, hl_in_data, how='left', on=bbd_list)
+    calc_df.loc[pd.isnull(calc_df['HL delivery in all1']), 'HL delivery in all1'] = 0
+
+    hl2add = calc_df[(calc_df['HL delivery in all1'] == 0) & (calc_df['HL Billed'] > 0)]
+    hl2add = hl2add[bbd_list + ['HL Billed']].rename(columns={'HL Billed': 'Billed'})
+    hl2add['Site'] = 'HL'
+    data = pd.concat([data, hl2add])
+
+    ##############################################################
+    # Refresh Site Goal column and add RevShare column
+    # Temporarily store Non-standard Site Rate in Net Site Expense column
+    ##############################################################
+
+    site_goals = site_goals[bbd_list + ['Site', 'Site Goal', 'Non-standard Site Rate']]
+    data = data.drop('Site Goal', axis=1)
+    data = pd.merge(data, site_goals, how='left', on=bbd_list+['Site'])
+    data = data.rename(columns={'Non-standard Site Rate': 'Net Site Expense'})
+
+    revshare_dict = get_revshare_dict()
+    revshare_dict['HL'] = 0  # Need to revisit, to change the function
+    revshare_dict['*Fill in*'] = '*Fill in*'
+    data['RevShare'] = [revshare_dict[site] for site in data['Site']]
+
+    ##############################################################
+    # Add DAS columns, HCP, and In BG
+    ##############################################################
+
+    das_month = str(mo) + '/' + str(year)
+    das = make_das(use_scheduled_units=True, export=False)
+
+    das_1 = das[das[das_month] > 0][['BBR', 'Campaign Name', 'Flight Type', 'Brand', 'Account Name', 'Agency', 'IO Number', 'Start Date', 'End Date',
+                                     'Opportunity Owner', '2nd Opportunity Owner', 'Campaign Manager', 'Line Item Number', 'Line Description', 'Price Calculation Type',
+                                     'Sales Price', 'Base Rate', 'Baked-In Production Rate', das_month, 'Customer Billing ID', 'Customer Billing Name']]
+    das_1 = das_1.rename(columns={'Line Description': 'DAS Line Item Name', das_month: 'Total Goal'})
+
+    data = data.drop('Price Calculation Type', axis=1)
+    data = pd.merge(data, das_1, how='left', on=bbd_list)
+
+    # Reformat the Sales Contact columns
+    def sales_rep(row):
+        rep1 = row['Opportunity Owner']
+        rep2 = row['2nd Opportunity Owner']
+        if isinstance(rep1, float):
+            return rep1
+        if rep2 == 'N/A':
+            return rep1
+        else:
+            return rep1 + ', ' + rep2
+
+    data['Sales Contact'] = data.apply(lambda row: sales_rep(row), axis=1)
+
+    ##############################################################
+    # For SEM campaigns, change Site from HL to *Fill in*
+    ##############################################################
+
+    data.loc[data['Campaign Manager'] == 'SEM', 'Site'] = '*Fill in*'
+
+    ##############################################################
+    # Add Total Billable from BG
+    ##############################################################
+
+    data = pd.merge(data, calc_df[bbd_list + ['Total Billed']], how='left', on=bbd_list)
+
+    ##############################################################
+    # Additional labeling
+    ##############################################################
+
+    data['Finalized?'] = 0
+    data['HCP'] = ''
+    data['HL/HW'] = 'HW'
+    data['Own/Partner/DSP'] = ''
+
+    # Label HCP
+    data.loc[pd.notnull(data['Campaign Name']) & data['Campaign Name'].str.contains('HCP', case=False), 'HCP'] = 'HCP'
+
+    # Add HL/HW
+    data.loc[(data['Site'] == 'HL') | (data['Site'] == 'Medical News Today'), 'HL/HW'] = 'HL'
+
+    # Add HL/Partner/DSP
+    data.loc[(data['Site'] == 'HL') | (data['Site'] == 'Medical News Today'), 'Own/Partner/DSP'] = 'Own'
+    data.loc[data['Campaign Manager'] == 'SEM', 'Own/Partner/DSP'] = 'DSP'
+    data.loc[data['Own/Partner/DSP'] == '', 'Own/Partner/DSP'] = 'Partner'
+
+    ##############################################################
+    # Add columns to be calculated (Want formulas in Excel)
+    ##############################################################
+
+    data['Gross Site Revenue (Does Not Include Production Fee)'] = ''
+    data['Production Fee'] = ''
+    data['Gross Revenue (Includes Production Fee)'] = ''
+    data['Billed > Delivered'] = ''
+
+    ##############################################################
+    # Rename columns and sort
+    ##############################################################
+
+    rename_dict = {'BBR': 'BBR #', 'Billed': 'Billed Impressions/UVs', 'Brand': 'Advertiser',
+                   'Line Item Number': 'Line Item #', 'DAS Line Item Name': 'Line Item Name',
+                   'Price Calculation Type': 'Unit', 'Baked-In Production Rate': 'Baked-in Production',
+                   'Sales Price': 'Gross Rate', 'Start Date': 'Flight Start Date',
+                   'End Date': 'Flight End Date', 'Flight Type': 'Goal Breakdown',
+                   'Account Name': 'Parent', 'Total Billed': 'Total Billable'}
+
+    header = ['Finalized?', 'BBR #', 'Advertiser', 'Campaign Name', 'Unit', 'Line Item #', 'Line Item Name', 'Site',
+              'Billed Impressions/UVs', 'Site Goal', 'Adjusted w/ Discrepancy', 'Discrepancy', 'Delivered',
+              'Goal Breakdown', 'Total Billable', 'Total Goal', 'Base Rate', 'Gross Site Revenue (Does Not Include Production Fee)',
+              'RevShare', 'Net Site Expense', 'Baked-in Production', 'Production Fee', 'Gross Rate',
+              'Gross Revenue (Includes Production Fee)', 'Own/Partner/DSP', 'HL/HW', 'HCP', 'Parent', 'Agency',
+              'Customer Billing ID', 'Customer Billing Name', 'IO Number', 'Flight Start Date', 'Flight End Date',
+              'Sales Contact', 'Billed > Delivered', 'Clicks']
+
+    sortby = ['Advertiser', 'BBR #', 'Line Item #', 'Line Item Name', 'Site']
+
+    data = data.rename(columns=rename_dict)[header].sort_values(sortby).reset_index(drop=True)
+
+    ##############################################################
+    # Formulas
+    ##############################################################
+
+    def col_name2col_letter(col_name):
+        col_num = header.index(col_name) + 1
+        return opx.utils.get_column_letter(col_num)
+
+    col_unit = col_name2col_letter('Unit')
+    col_billed = col_name2col_letter('Billed Impressions/UVs')
+    col_base_rate = col_name2col_letter('Base Rate')
+    col_prod_rate = col_name2col_letter('Baked-in Production')
+    col_gross_rate = col_name2col_letter('Gross Rate')
+    col_gross_rev_wo_prod = col_name2col_letter('Gross Site Revenue (Does Not Include Production Fee)')
+    col_revshare = col_name2col_letter('RevShare')
+    col_own_partner_dsp = col_name2col_letter('Own/Partner/DSP')
+    col_delivered = col_name2col_letter('Delivered')
+
+    def get_gross_rev_wo_prod(i):
+        row = str(i + 2)
+        output = '=IF(' + col_unit + row + '="CPM", '
+        output += col_billed + row + '/1000*' + col_base_rate + row + ', '
+        output += col_billed + row + '*' + col_base_rate + row + ')'
+        return output
+
+    def get_expense(row):
+        row_index = str(row.name + 2)
+
+        if (row['Net Site Expense'] == '') or pd.isnull(row['Net Site Expense']):
+            return '=' + col_gross_rev_wo_prod + row_index + '*' + col_revshare + row_index
+
+        non_standard_rate = str(row['Net Site Expense'])
+        if row['Unit'] == 'CPM':
+            return '=' + col_billed + row_index + '/1000*' + non_standard_rate
+        else:
+            return '=' + col_billed + row_index + '*' + non_standard_rate
+
+    def get_prod_fee(i):
+        row = str(i + 2)
+        output = '=' + col_billed + row + '*' + col_prod_rate + row
+        return output
+
+    def get_gross_rev_w_prod(i):
+        row = str(i + 2)
+        output = '=IF(' + col_unit + row + '="CPM", '
+        output += col_billed + row + '/1000*' + col_gross_rate + row + ', '
+        output += col_billed + row + '*' + col_gross_rate + row + ')'
+        return output
+
+    def get_billed_gt_delivered(i):
+        row = str(i + 2)
+        output = '=IF(' + col_own_partner_dsp + row + '="DSP", '
+        output += '"", ' + col_billed + row + '>' + col_delivered + row + ')'
+        return output
+
+    data['Gross Site Revenue (Does Not Include Production Fee)'] = [get_gross_rev_wo_prod(i) for i in range(len(data))]
+    data['Net Site Expense'] = data.apply(lambda row: get_expense(row), axis=1)
+    data['Production Fee'] = [get_prod_fee(i) for i in range(len(data))]
+    data['Gross Revenue (Includes Production Fee)'] = [get_gross_rev_w_prod(i) for i in range(len(data))]
+    data['Billed > Delivered'] = [get_billed_gt_delivered(i) for i in range(len(data))]
+
+    ##############################################################
+    # Output excel
+    ##############################################################
+
+    writer = pd.ExcelWriter(output_file_name)
+    data.to_excel(writer, 'Billable', index=False)
+    writer.save()
+
+    return
+
+
+
 
 
