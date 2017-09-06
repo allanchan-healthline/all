@@ -1,0 +1,11 @@
+.*
+!/.gitignore
+
+pickles/
+Anaconda3-4.4.0-Linux-x86_64.sh
+adbook/adbook_2017_07
+adbook/adbook_2017_08/
+adbook/last_run_2017_07
+adbook/last_run_2017_08
+
+
