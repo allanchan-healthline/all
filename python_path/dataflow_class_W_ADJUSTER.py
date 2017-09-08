@@ -12,7 +12,6 @@ import pandas as pd
 from datetime import datetime
 
 HAS_CHANGED = {}
-DF = {}
 
 #############################################
 # Super Class
@@ -41,7 +40,7 @@ class DataFlow():
         with open(DataFlow.DIR_PICKLES + '/' + self.pickle_name, 'wb') as f:
             pickle.dump(df, f)
 
-    def update_has_changed_df_dicts(self):
+    def update_has_changed_dict(self):
         # Whether this file is changing or not
         if len(self.dependency_list) == 0:
             # No other file to depend on
@@ -54,20 +53,18 @@ class DataFlow():
                 if HAS_CHANGED[obj.name]:
                     HAS_CHANGED[self.name] = True
 
-        # Load or create a df
+        # Create a df
         if self.use_pickle and self.pickle_exists() and not HAS_CHANGED[self.name]:
-            DF[self.name] = self.load_pickle()
             return
         df = self.perform_op()
         self.save_pickle(df)
-        DF[self.name] = df
         return
 
     def dependency_check(self):
         for obj in self.dependency_list:
-            if obj.name in DF:
+            if obj.name in HAS_CHANGED:
                 continue
-            obj.update_has_changed_df_dicts()
+            obj.update_has_changed__dicts()
 
     def check_pickle_exists(self):
         return os.path.exists(DataFlow.DIR_PICKLES + '/' + self.check_pickle_name)
@@ -177,7 +174,8 @@ class CPUV(DataFlow):
         df_list = []
         for dependency in self.dependency_list:
             if dependency.name != 'cpuv_goals':
-                df_list.append(DF[dependency.name])
+                df = dependency.load_pickle()
+                df_list.append(df))
         return pd.concat(df_list)
 
 #############################################
@@ -258,7 +256,8 @@ class DFP_MTD_All(DataFlow):
                                 ExcludeList()]
 
     def perform_op(self):
-        return label_dfp_mtd_all(DF['dfp_mtd_all_raw'])
+        df = DFP_MTD_AllRaw(self.last_delivery_date, self.path_csv, self.emailed_csv).load_pickle() 
+        return label_dfp_mtd_all(df)
 
 class TradeDeskRaw(DataFlow):
     def __init__(self, mo_year):
@@ -269,7 +268,8 @@ class TradeDeskRaw(DataFlow):
         self.dependency_list = [AdjusterTTD_Path(self.mo_year)]
 
     def perform_op(self):
-        return get_tradedesk_report(DF['adjuster_ttd_path'])
+        adjuster_ttd_path = AdjusterTTD_Path(self.mo_year).load_pickle()
+        return get_tradedesk_report(adjuster_ttd_path)
 
 class TradeDesk(DataFlow):
     def __init__(self, mo_year):
@@ -281,7 +281,8 @@ class TradeDesk(DataFlow):
                                 DAS(self.mo_year)]
 
     def perform_op(self):
-        return label_tradedesk_report(DF['ttd_raw'])
+        df = TradeDeskRaw(self.mo_year).load_pickle()
+        return label_tradedesk_report(df)
 
 class CPM(DataFlow):
     def __init__(self, last_delivery_date, path_csv, emailed_csv):
@@ -296,7 +297,9 @@ class CPM(DataFlow):
                                 TradeDesk(self.mo_year)]
 
     def perform_op(self):
-        return pd.concat([DF['dfp_mtd_all'], DF['ttd']])
+        df_dfp = DFP_MTD_All(self.last_delivery_date, self.path_csv, self.emailed_csv).load_pickle()
+        df_ttd = TradeDesk(self.mo_year).load_pickle()
+        return pd.concat([df_dfp, df_ttd])
 
 #############################################
 # All1 = (CPM + CPUV) x Salesforce (a.k.a. DAS)
@@ -340,7 +343,9 @@ class All1(DataFlow):
                                 DAS(self.mo_year)]
 
     def perform_op(self):
-        return make_all1(DF['cpm'], DF['cpuv'], DataFlow.TEMP_FIX_DAS4FLAT_FEE)
+        df_cpm = CPM(self.last_delivery_date, self.path_csv, self.emailed_csv).load_pickle()
+        df_cpuv = CPUV(self.mo_year).load_pickle()
+        return make_all1(df_cpm, df_cpuv, DataFlow.TEMP_FIX_DAS4FLAT_FEE)
 
 #############################################
 # Site Goals = Salesforce + PAS + CPUV Goals Sheet
@@ -461,7 +466,8 @@ class ThirdPartyDFP(DataFlow):
                                 DFP_MTD_AllRaw(self.last_delivery_date, None, None)]
 
     def perform_op(self):
-        df = get_grouped_aj3rd(DF['adjuster_dfp_path'], for_1st_party='DFP')
+        adjuster_dfp_path = AdjusterDFP_Path(self.mo_year).load_pickle()
+        df = get_grouped_aj3rd(adjuster_dfp_path, for_1st_party='DFP')
         df = get_labeled_grouped_aj3rd_for_dfp(df)
         return df
 
@@ -475,7 +481,8 @@ class ThirdPartyTTD(DataFlow):
                                 DAS(self.mo_year)]
 
     def perform_op(self):
-        df = get_grouped_aj3rd(DF['adjuster_ttd_path'], for_1st_party='TTD')
+        adjuster_ttd_path = AdjusterTTD_Path(self.mo_year).load_pickle()
+        df = get_grouped_aj3rd(adjuster_ttd_path, for_1st_party='TTD')
         df = get_labeled_grouped_aj3rd_for_ttd(df)
         return df
 
@@ -491,7 +498,9 @@ class ThirdPartyImps(DataFlow):
                                 ThirdPartyTTD(self.mo_year)]
 
     def perform_op(self):
-        df = pd.concat([DF['third_party_dfp'], DF['third_party_ttd']])
+        df_dfp = ThirdPartyDFP(self.mo_year, self.last_delivery_date).load_pickle()
+        df_ttd = ThirdPartyTTD(self.mo_year).load_pickle()
+        df = pd.concat([df_dfp, df_ttd])
         df = get_formatted_aj3rd(df)
         df = get_billable_aj3rd(df)
         return df
