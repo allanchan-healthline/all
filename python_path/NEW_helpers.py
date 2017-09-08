@@ -1,7 +1,7 @@
 import os
 import requests
 
-from simple_salesforce import SalesforceLogin
+from simple_salesforce import SalesforceLogin, Salesforce
 from gsheet_gdrive_api import *
 from googleapiclient import errors
 from apiclient.http import MediaFileUpload
@@ -64,13 +64,15 @@ def check_and_make_dir(path):
 # Salesforce (a.k.a. DAS), PAS, CPUV Goals, RevShare
 ###################################################################
 
-def make_das(use_scheduled_units=False, export=False):
-
-    ####################################################################
+def get_salesforce_login_info():
     username = 'kumiko.kashii@healthline.com'
     password = 'Eggplant123'
     security_token = 'wq3nA7vy9zD9AllhVMgMAacHQ'
-    ####################################################################
+    return (username, password, security_token)
+
+def make_das(use_scheduled_units=False, export=False):
+
+    username, password, security_token = get_salesforce_login_info()
 
     #1. Export Ad Ops DAS Reporting from Salesforce (Converted Report ID: 00O61000003rUoxEAE, Non-Converted Report ID: 00O61000003KY4AEAW)
     (session_id, instance) = SalesforceLogin(username=username, password=password, security_token=security_token)
@@ -241,6 +243,31 @@ def get_revshare_dict():
                      'Patient Info': 0.4,
                      'SkinSight': 0.5}
     return revshare_dict
+
+###################################################################
+# Salesforce queries
+###################################################################
+
+def get_expedited_invoice_opportunities():
+    
+    username, password, security_token = get_salesforce_login_info()
+    sf = Salesforce(username=username, password=password, security_token=security_token)
+    query = "SELECT BBR__c, Name, Expedited_Invoicing_Requested__c FROM Opportunity"
+    result = sf.query_all(query)
+    records = result['records']
+
+    values = []
+    for record in records:
+        bbr = record['BBR__c']
+        oppt_name = record['Name']
+        exp_inv = record['Expedited_Invoicing_Requested__c']
+        values.append([bbr, oppt_name, exp_inv])
+
+    header = ['BBR', 'Opportunity Name', 'Expedited Invoice']
+    df = pd.DataFrame(values, columns=header)
+    df = df[df['Expedited Invoice']]  # Only select True
+
+    return df
 
 ###################################################################
 # DAS-related

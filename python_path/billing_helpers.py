@@ -73,6 +73,14 @@ def make_bg_as_csv(year, mo):
     bg = bg[bg['Price Calculation Type'] != 'CPA']
 
     ##############################################################
+    # Add Expedited Invoice
+    ##############################################################
+
+    exp_inv = get_expedited_invoice_opportunities()
+    exp_inv = exp_inv[['BBR', 'Expedited Invoice']].drop_duplicates()
+    bg = pd.merge(bg, exp_inv, how='left', on=['BBR'])
+
+    ##############################################################
     # Multi-Month Bill Up To
     ##############################################################
     
@@ -158,7 +166,7 @@ def make_bg_as_csv(year, mo):
     header = ['OLI', 'Advertiser', 'Agency', 'Campaign Name', 'Purchase Order / Insertion Order', 'Line Item Number',
               'Placement', 'Rate Type', 'Rate', 'Billed Units', 'Total Cost', 'Booked Impressions', '110%', 'Multi-Month Bill Up To',
               'Discrepancy', 'First Party Units', 'Third Party Impressions', 'DFA(by ID)', 'Check DFA', 'Third Party System',
-              'Goal Breakdown', 'AM', 'CM', 'BBR', 'DAS Cost', 'Actual Cost',
+              'Goal Breakdown', 'AM', 'CM', 'BBR', 'Expedited Invoice', 'DAS Cost', 'Actual Cost',
               'DAS v Actual Cost', 'Hit the goal?', 'UD', 'UD $', 'Confirmed?', 'Stage']
 
     sortby = ['Advertiser', 'Campaign Name', 'BBR', 'Line Item Number', 'Placement']
@@ -188,10 +196,11 @@ def make_bg_as_csv(year, mo):
     col_das_cost = col_name2col_letter('DAS Cost')
     col_ud = col_name2col_letter('UD')
     col_dfa_byid = col_name2col_letter('DFA(by ID)')
+    col_oli = col_name2col_letter('OLI')
 
     def get_billed_units(i):
         row = str(i + 2)
-        output = '=ROUND(IF(' + col_third_party_system + row + '="DFP", '
+        output = '=ROUND(IF(OR(' + col_third_party_system + row + '="DFP", ' + col_third_party_system + row + '="The Trade Desk"), '
         output += 'IF(' + col_goal_breakdown + row + '="Monthly", MIN(' + col_booked_imps + row + ', ' + col_first_party_units + row + '), '
         output += 'MIN(' + col_110 + row + ', ' + col_multimonth_billupto + row + ', ' + col_first_party_units + row + ')), '
         output += 'IF(' + col_goal_breakdown + row + '="Monthly", MIN(' + col_booked_imps + row + ', ' + col_third_party_imps + row + '), '
@@ -253,6 +262,13 @@ def make_bg_as_csv(year, mo):
         output += col_third_party_imps + row + '=' + col_dfa_byid + row + ', "")'
         return output
 
+    def update_billed_units(row):
+        if row['Rate Type'] == 'Flat-fee':
+            if row['Stage'] == 'Booked Not Live':
+                return 0
+            return row['Booked Impressions']
+        return row['Billed Units']
+
     bg['Billed Units'] = [get_billed_units(i) for i in range(len(bg))]
     bg['Total Cost'] = [get_total_cost(i) for i in range(len(bg))]
     bg['110%'] = [get_110(i) for i in range(len(bg))]
@@ -265,7 +281,9 @@ def make_bg_as_csv(year, mo):
     bg['Discrepancy'] = [get_discrepancy(i) for i in range(len(bg))]
     bg['Check DFA'] = [get_check_dfa(i) for i in range(len(bg))]
 
+    # Not same for all rows
     bg.loc[bg['Rate Type'] != 'CPM', ('Discrepancy', 'Check DFA')] = ('', '')
+    bg['Billed Units'] = bg.apply(lambda row: update_billed_units(row), axis=1)
 
     ##############################################################
     # Grand Total row
@@ -312,7 +330,8 @@ def make_bg_as_csv(year, mo):
 def upload_bg2gdrive(year, mo, csv_file_name):
 
     #################################################
-    folder_id = '0B71ox_2Qc7gmWkNWM21YUU9MSEU'
+    folder_id = '0B71ox_2Qc7gmYnJFcUEtZTRrVG8'  # TEST
+    #folder_id = '0B71ox_2Qc7gmWkNWM21YUU9MSEU'
     #################################################
 
     service = get_gsheet_service()    
@@ -439,6 +458,17 @@ def format_bg(file_id):
                                                                                            'values': [{'userEnteredValue': cm}]}}}}}}
         filter_views.append(filter_view_dict)
 
+    # Add a filter view for expedited invoice
+    filter_view_dict = {'addFilterView': {'filter': {'title': 'exp inv', 
+                                                     'range': {'sheetId': s_id_bg,
+                                                               'startRowIndex': 0,
+                                                               'endRowIndex': n_row-1,
+                                                               'startColumnIndex': 0,
+                                                               'endColumnIndex': n_col},
+                                                     'criteria': {header.index('Expedited Invoice'): {'condition': {'type': 'TEXT_EQ', 
+                                                                                                                    'values': [{'userEnteredValue': 'TRUE'}]}}}}}}
+    filter_views.append(filter_view_dict)
+
     # Column width
     width = []
     for col in header:
@@ -469,6 +499,227 @@ def format_bg(file_id):
 
     # Delete formatting template sheet
     result = service.spreadsheets().batchUpdate(spreadsheetId=file_id, body={'requests': [{'deleteSheet': {'sheetId': s_id_template}}]}).execute()
+
+    return
+
+def add_cpuv_me2bg_gsheet(year, mo, bg_ss_id):
+
+    ##############################################################
+    # Make data
+    ##############################################################
+
+    # Get CPUV Goals Sheet
+    DIR_PICKLES = PATH2PICKLES + '/' + PREFIX4ALWAYS_UP2DATE + str(year) + '_' + str(mo).zfill(2)
+    with open(DIR_PICKLES + '/' + 'cpuv_goals.pickle', 'rb') as f:
+        cpuv_goals = pickle.load(f)
+
+    # Columns from Goals Sheet
+    site_goal_col_list = []
+    for col in cpuv_goals.columns.tolist():
+        if ('Goal' in col) & (col not in ['Goal', 'Goal Check', 'Max at Goal']):
+            site_goal_col_list.append(col)
+
+    me = cpuv_goals[['BBR', 'Campaign Name', 'Line Description', 'Price Calculation Type', '1st Line Item', 'Goal'] + site_goal_col_list]
+
+    # Columns to add
+    site_delivery_col_list = [col.replace(' Goal', ' Delivery') for col in site_goal_col_list]
+
+    for col in ['OLI', 'Hit the Goal?', 'Delivery', 'Delivery (Paid + AV)', 'Goal (Paid + AV)'] + site_delivery_col_list:
+        me[col] = ''
+
+    # Clean up
+    for col in site_goal_col_list:
+        me.loc[me[col] == 0, col] = ''
+
+    header = ['OLI', 'BBR', 'Campaign Name', 'Line Description', 'Price Calculation Type', 'Hit the Goal?', '1st Line Item',
+              'Delivery', 'Delivery (Paid + AV)', 'Goal (Paid + AV)', 'Goal']
+
+    for i in range(len(site_goal_col_list)):
+        header.append(site_goal_col_list[i])
+        header.append(site_delivery_col_list[i])
+
+    me = me[header]
+
+    # Add formulas
+    def col_name2col_letter(col_name):
+        col_num = header.index(col_name) + 1
+        return opx.utils.get_column_letter(col_num)
+
+    col_delivery = col_name2col_letter('Delivery')
+    col_goal = col_name2col_letter('Goal')
+    col_1st_line = col_name2col_letter('1st Line Item')
+
+    def get_hit_goal(i):
+        row = str(i + 2)
+        return '=IF(' + col_delivery + row + '>=' + col_goal + row + ', "Y", "N")'
+
+    site_delivery_col_letter_list = [col_name2col_letter(col) for col in site_delivery_col_list]
+    def get_delivery_paid_av(i):
+        row = str(i + 2)
+        cell_list = [(j + row) for j in site_delivery_col_letter_list]
+        return '=' + '+'.join(cell_list)
+
+    def get_goal_paid_av(i):
+        row = str(i + 2)
+        next_row = str(i + 3)
+        output = '=IF(AND(' + col_1st_line + row + '=1, ' + col_1st_line + next_row + '=0), '
+        output += col_goal + row + '+' + col_goal + next_row + ', '
+        output += 'IF(' + col_1st_line + row + '=0, 0, ' + col_goal + row + '))'
+        return output
+
+    me['Hit the Goal?'] = [get_hit_goal(i) for i in range(len(me))]
+    me['Delivery (Paid + AV)'] = [get_delivery_paid_av(i) for i in range(len(me))]
+    me['Goal (Paid + AV)'] = [get_goal_paid_av(i) for i in range(len(me))]
+
+    ##############################################################
+    # Upload values to BG Google Sheet as 'CPUV ME' sheet
+    ##############################################################
+
+    # Replace null with empty string. Otherwise upload to Google Sheet fails.
+    me = me.fillna('')
+    me_values = [me.columns.tolist()] + me.values.tolist()
+
+    # Upload
+    service = get_gsheet_service()
+
+    sheet_name = 'CPUV ME'
+    sheet_id = gsheet_create_sheet(sheet_name, bg_ss_id)
+    result = service.spreadsheets().values().update(spreadsheetId=bg_ss_id, range=sheet_name,
+                                                    valueInputOption='USER_ENTERED',
+                                                    body={'values': me_values}).execute()
+
+    ##############################################################
+    # Format sheet
+    ##############################################################
+
+    n_row = len(me) + 1
+    n_col = len(header)
+
+    # Freeze header row and columns up to Line Description
+    freeze = [{'updateSheetProperties': {'properties': {'sheetId': sheet_id,
+                                                        'gridProperties': {'frozenRowCount': 1,
+                                                                           'frozenColumnCount': header.index('Line Description') + 1}},
+                                         'fields': 'gridProperties(frozenRowCount, frozenColumnCount)'}}]
+
+    # Wrap header
+    wrap = [{'updateCells': {'rows': [{'values': [{'userEnteredFormat': {'wrapStrategy': 'WRAP'}}] * n_col}],
+                             'fields': 'userEnteredFormat.wrapStrategy',
+                             'range': {'sheetId': sheet_id,
+                                       'startRowIndex': 0,
+                                       'endRowIndex': 1,
+                                       'startColumnIndex': 0,
+                                       'endColumnIndex': n_col}}}]
+
+    # Color header
+    yellow = {'red': 1, 'green': 1, 'blue': .729, 'alpha': 1}
+    orange = {'red': 1, 'green': .875, 'blue': .729, 'alpha': 1}
+    blue = {'red': .729, 'green': .882, 'blue': 1, 'alpha': 1}
+    green = {'red': .729, 'green': 1, 'blue': .788, 'alpha': 1}
+    purple = {'red': .867, 'green': .827, 'blue': .933, 'alpha': 1}
+    pink = {'red': 1, 'green': .882, 'blue': .902, 'alpha': 1}
+    light_blue = {'red': .827, 'green': .933, 'blue': .922, 'alpha': 1}
+
+    site_color_dict = {0: orange, 1: blue, 2: green, 3: purple, 4: pink, 5: light_blue}
+
+    def make_color_dict(start_col_name, n2repeat, rgba):
+        return {'updateCells': {'rows': [{'values': [{'userEnteredFormat': {'backgroundColor': rgba}}] * n2repeat}],
+                                'fields': 'userEnteredFormat.backgroundColor',
+                                'range': {'sheetId': sheet_id,
+                                          'startRowIndex': 0,
+                                          'endRowIndex': 1,
+                                          'startColumnIndex': header.index(start_col_name),
+                                          'endColumnIndex': header.index(start_col_name) + n2repeat}}}
+
+    color = []
+    color.append(make_color_dict(header[0], header.index('Goal')+1, yellow))
+    for i in range(len(site_goal_col_list)):
+        i_mod = i % len(site_color_dict)
+        color.append(make_color_dict(site_goal_col_list[i], 2, site_color_dict[i_mod]))
+
+    # Font
+    font = [{'updateCells': {'rows': [{'values': [{'userEnteredFormat': {'textFormat': {'fontFamily': 'Roboto',
+                                                                                        'fontSize': 9}}}] * n_col}] * n_row,
+                             'fields': 'userEnteredFormat.textFormat(fontFamily, fontSize)',
+                             'range': {'sheetId': sheet_id,
+                                       'startRowIndex': 0,
+                                       'endRowIndex': n_row,
+                                       'startColumnIndex': 0,
+                                       'endColumnIndex': n_col}}}]
+
+    # Value formatting for UVs
+    value_formatting = [{'repeatCell': {'range': {'sheetId': sheet_id,
+                                                  'startRowIndex': 1,
+                                                  'endRowIndex': n_row,
+                                                  'startColumnIndex': header.index('Delivery'),
+                                                  'endColumnIndex': n_col},
+                                        'cell': {'userEnteredFormat': {'numberFormat': {'type': 'NUMBER',
+                                                                                        'pattern': '###,###,##0'}}},
+                                        'fields': 'userEnteredFormat.numberFormat'}}]
+
+    # Add filter
+    basic_filter = [{'setBasicFilter': {'filter': {'range': {'sheetId': sheet_id,
+                                                             'startRowIndex': 0,
+                                                             'endRowIndex': n_row,
+                                                             'startColumnIndex': 0,
+                                                             'endColumnIndex': n_col}}}}]
+
+    # Column width
+    width = [{'updateDimensionProperties': {'range': {'sheetId': sheet_id,
+                                                      'dimension': 'COLUMNS',
+                                                      'startIndex': header.index('Delivery'),
+                                                      'endIndex': n_col},
+                                            'properties': {'pixelSize': 75},
+                                            'fields': 'pixelSize'}}]
+
+    # Send all requests
+    requests = freeze + wrap + color + font + value_formatting + basic_filter + width
+    result = service.spreadsheets().batchUpdate(spreadsheetId=bg_ss_id, body={'requests': requests}).execute()
+
+    return
+
+def update_bg_cpuv_formulas(file_id):
+
+    service = get_gsheet_service()
+    sheet_name = 'BG'
+
+    # Make a request to Google Sheet
+    result = service.spreadsheets().values().get(
+        spreadsheetId=file_id, range=sheet_name, valueRenderOption='UNFORMATTED_VALUE').execute()
+    values = result.get('values', [])
+
+    # If CPUV, update formulas
+    header = values[0]
+    i_type = header.index('Rate Type')
+
+    def col_name2col_letter(col_name):
+        col_num = header.index(col_name) + 1
+        return opx.utils.get_column_letter(col_num)
+
+    col_letter_fpu = col_name2col_letter('First Party Units')
+    col_letter_oli = col_name2col_letter('OLI')
+    col_letter_tpu = col_name2col_letter('Third Party Impressions')
+
+    upload_data = []
+    for i in range(len(values)):
+        row = values[i]
+        if row[i_type] != 'CPUV':
+            continue
+
+        i_row = str(i + 1)
+        
+        # First Party Units
+        cell = sheet_name + '!' + col_letter_fpu + i_row
+        value = "=IFERROR(VLOOKUP(" + col_letter_oli + i_row + ",'CPUV ME'!$A:$H,8,false), 0)"
+        upload_data.append({'range': cell, 'majorDimension': 'ROWS', 'values': [[value]]})
+
+        # Third Party Units
+        cell = sheet_name + '!' + col_letter_tpu + i_row
+        value = "=" + col_letter_fpu + i_row
+        upload_data.append({'range': cell, 'majorDimension': 'ROWS', 'values': [[value]]})
+
+    result = service.spreadsheets().values().batchUpdate(spreadsheetId=file_id, body={'valueInputOption': 'USER_ENTERED', 'data': upload_data}).execute()
+    
+    return
 
 def get_bg(year, mo):
 
@@ -1141,7 +1392,7 @@ def make_site_report_as_excel(year, mo, prefix4output):
     data['RevShare'] = [revshare_dict[site] for site in data['Site']]
 
     ##############################################################
-    # Add DAS columns, HCP, and In BG
+    # Add DAS columns
     ##############################################################
 
     das_month = str(mo) + '/' + str(year)
@@ -1181,10 +1432,33 @@ def make_site_report_as_excel(year, mo, prefix4output):
     data = pd.merge(data, calc_df[bbd_list + ['Total Billed']], how='left', on=bbd_list)
 
     ##############################################################
+    # Add Finalized?
+    # If expedited invoice, 'Exp Inv'. Else 0.
+    ##############################################################
+
+    def is_expedited_invoice(ei):
+        if isinstance(ei, bool):
+            return ei
+        if isinstance(ei, str):
+            if ei.lower == 'true':
+                return True
+            return False
+        return False
+
+    exp_inv_bbr_list = bg[[is_expedited_invoice(ei) for ei in bg['Expedited Invoice']]]['BBR']
+    exp_inv_bbr_list = list(set(exp_inv_bbr_list))
+
+    def get_finalized(row):
+        if row['BBR'] in exp_inv_bbr_list:
+            return 'Exp Inv'
+        return 0    
+
+    data['Finalized?'] = data.apply(lambda row: get_finalized(row), axis=1)
+ 
+    ##############################################################
     # Additional labeling
     ##############################################################
 
-    data['Finalized?'] = 0
     data['HCP'] = ''
     data['HL/HW'] = 'HW'
     data['Own/Partner/DSP'] = ''
