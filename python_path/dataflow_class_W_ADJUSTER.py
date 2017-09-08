@@ -64,7 +64,7 @@ class DataFlow():
         for obj in self.dependency_list:
             if obj.name in HAS_CHANGED:
                 continue
-            obj.update_has_changed__dicts()
+            obj.update_has_changed_dict()
 
     def check_pickle_exists(self):
         return os.path.exists(DataFlow.DIR_PICKLES + '/' + self.check_pickle_name)
