@@ -217,7 +217,7 @@ def get_cpuv_goals(year, sheet):
     uv_goals_df = pd.DataFrame(values[1:])
     uv_goals_df.columns = uv_goals_df.iloc[0]
     uv_goals_df = uv_goals_df[1:].reset_index(drop=True)
-    uv_goals_df = uv_goals_df[[isinstance(cell, str) for cell in uv_goals_df['BBR']]]
+    uv_goals_df = uv_goals_df[[isinstance(cell, str) for cell in uv_goals_df['OLI']]]
 
     # Empty cells are in the string type. Convert them to numeric (float).
     for site_goal in ['HL Goal', 'Drugs Goal', 'LS Goal', 'GoodRx Goal', 'EmpowHer Goal', 'MNT Goal']:
