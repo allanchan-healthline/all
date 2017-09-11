@@ -252,7 +252,7 @@ def make_bg_as_csv(year, mo):
 
     def get_discrepancy(i):
         row = str(i + 2)
-        output = '=IF(' + col_third_party_system + row + '="DFP", 0, '
+        output = '=IF(OR(' + col_third_party_system + row + '="DFP", ' + col_third_party_system + row + '="The Trade Desk"), 0, '
         output += '(' + col_first_party_units + row + '-' + col_third_party_imps + row + ')/' + col_first_party_units + row + ')'
         return output
 
@@ -519,12 +519,12 @@ def add_cpuv_me2bg_gsheet(year, mo, bg_ss_id):
         if ('Goal' in col) & (col not in ['Goal', 'Goal Check', 'Max at Goal']):
             site_goal_col_list.append(col)
 
-    me = cpuv_goals[['BBR', 'Campaign Name', 'Line Description', 'Price Calculation Type', '1st Line Item', 'Goal'] + site_goal_col_list]
+    me = cpuv_goals[['OLI', 'BBR', 'Campaign Name', 'Line Description', 'Price Calculation Type', '1st Line Item', 'Goal'] + site_goal_col_list]
 
     # Columns to add
     site_delivery_col_list = [col.replace(' Goal', ' Delivery') for col in site_goal_col_list]
 
-    for col in ['OLI', 'Hit the Goal?', 'Delivery', 'Delivery (Paid + AV)', 'Goal (Paid + AV)'] + site_delivery_col_list:
+    for col in ['Hit the Goal?', 'Delivery', 'Delivery (Paid + AV)', 'Goal (Paid + AV)'] + site_delivery_col_list:
         me[col] = ''
 
     # Clean up
