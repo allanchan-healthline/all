@@ -24,6 +24,8 @@ CC_TRACKER_GSHEET = {'Drugs.com': '1zXIoBgG2BG7qH-83SkOsvdlJe9tVnmvGCArCbV-eSfw'
 ###################################################################
 
 def start_end_month(formatted_date):
+    """Return the first date of the month and the last date of the month."""
+
     start_date = formatted_date.replace(day=1)
     this_month = start_date.month
     this_month_year = start_date.year
@@ -37,8 +39,10 @@ def start_end_month(formatted_date):
     return (start_date, end_date)
 
 def get_last_modified_local(path):
-    # Timestamp is returned in your timezone
-    # Covert it to UTC (= PST + 7hr)
+    """Return the modified date of a file in a local machine, converted to UTC (= PST + 7hr)
+    Return None if no such file exists.
+    """
+    
     if os.path.isfile(path):
         last_modified = os.path.getmtime(path)
         last_modified = datetime.utcfromtimestamp(last_modified)
@@ -46,7 +50,8 @@ def get_last_modified_local(path):
     return None
 
 def get_last_modified_gdrive(file_id):
-    # Google Drive returns time in UTC (= PST + 7hr)
+    """Return the modified date of a file in Google Drive, in UTC (=PST + 7hr)."""
+
     service = get_gdrive_service()
 
     try:
@@ -57,6 +62,8 @@ def get_last_modified_gdrive(file_id):
         print('An error occurred: %s' % error)
 
 def check_and_make_dir(path):
+    """Make a director if it doesn't exist."""
+
     if not os.path.exists(path):
         os.makedirs(path)
 
@@ -65,12 +72,23 @@ def check_and_make_dir(path):
 ###################################################################
 
 def get_salesforce_login_info():
+    """Return username, password, and security token of a Salesforce login account.
+    The values need to be updated if anything changes.
+    """
+
     username = 'kumiko.kashii@healthline.com'
     password = 'Eggplant123'
     security_token = 'wq3nA7vy9zD9AllhVMgMAacHQ'
     return (username, password, security_token)
 
 def make_das(use_scheduled_units=False, export=False):
+    """Return DAS report as a dataframe.
+
+    If use_scheduled_units is True, then it uses Scheduled Units in Salesforce. If False, then it uses
+    Actual Units where available, and Scheduled Units elsewhere.
+
+    If export is True, then it saves the dataframe as a csv.
+    """
 
     username, password, security_token = get_salesforce_login_info()
 
@@ -172,6 +190,7 @@ def make_das(use_scheduled_units=False, export=False):
     return das
 
 def get_pas(year, sheet):
+    """Return Partner Allocation Sheet as a dataframe."""
 
     spreadsheetId = PAS_WHICH_GSHEET[year]
 
@@ -207,6 +226,7 @@ def get_pas(year, sheet):
     return pas_df
 
 def get_cpuv_goals(year, sheet):
+    """Return CPUV Goals Sheet as a dataframe."""
 
     spreadsheetId = CPUV_GOALS_WHICH_GSHEET[year]
 
@@ -230,6 +250,10 @@ def get_cpuv_goals(year, sheet):
     return uv_goals_df
 
 def get_revshare_dict():
+    """Return partner revenue share dictionary.
+    This is what we pay each site. For example, HL pays Drugs.com 60% of gross revenue.
+    """
+
     revshare_dict = {'Black Health Matters': 0.5,
                      'Dr.Gourmet': 0.51,
                      'Drugs.com': 0.6,
