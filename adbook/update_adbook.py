@@ -9,6 +9,9 @@ import shutil
 import pickle
 
 def main(year, mo):
+    """Generate adbook html files in a directory called adbook_year_mo.
+    Also, copy 2 css files and js files in that directory.
+    """
 
     ############################################################################
     # Get most recent pickles
