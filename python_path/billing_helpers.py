@@ -330,8 +330,7 @@ def make_bg_as_csv(year, mo):
 def upload_bg2gdrive(year, mo, csv_file_name):
 
     #################################################
-    folder_id = '0B71ox_2Qc7gmYnJFcUEtZTRrVG8'  # TEST
-    #folder_id = '0B71ox_2Qc7gmWkNWM21YUU9MSEU'
+    folder_id = '0B71ox_2Qc7gmWkNWM21YUU9MSEU'
     #################################################
 
     service = get_gsheet_service()    
