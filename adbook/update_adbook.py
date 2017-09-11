@@ -10,7 +10,7 @@ import pickle
 
 def main(year, mo):
     """Generate adbook html files in a directory called adbook_year_mo.
-    Also, copy 2 css files and js files in that directory.
+    Also, copy 2 css files and 2 js files in that directory.
     """
 
     ############################################################################
