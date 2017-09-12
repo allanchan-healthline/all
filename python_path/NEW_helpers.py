@@ -273,7 +273,8 @@ def get_revshare_dict():
 ###################################################################
 
 def get_expedited_invoice_opportunities():
-    
+    """Return a dataframe of Salesforce opportunities where the Expedited Invoice field is True."""
+ 
     username, password, security_token = get_salesforce_login_info()
     sf = Salesforce(username=username, password=password, security_token=security_token)
     query = "SELECT BBR__c, Name, Expedited_Invoicing_Requested__c FROM Opportunity"
@@ -298,25 +299,43 @@ def get_expedited_invoice_opportunities():
 ###################################################################
 
 def bbr2brand(df, bbr, das):
+    """Return a datafame with a BBR column added to the input df.
+    The input df requires a Brand column.
+    """
+
     das_bbr_brand = das[['BBR', 'Brand']].drop_duplicates()
     df = pd.merge(df, das_bbr_brand, how='left', left_on=bbr, right_on='BBR')
     df = df.drop('BBR', axis=1)
     return df
 
 def bbr2cm(df, bbr, das):
+    """Return a dataframe with a Camapign Manager column added to the input df.
+    The input df requires a BBR column.
+    
+    Currently exclude Campaign Manager == 'SEM'.
+    When 'SEM' is to be added, it's necessary to join on ['BBR', 'Line Description'] or 'OLI'.
+    """
+
     das_bbr_cm = das[das['Campaign Manager'] != 'SEM'][['BBR', 'Campaign Manager']].drop_duplicates()
     df = pd.merge(df, das_bbr_cm, how='left', left_on=bbr, right_on='BBR')
     df = df.drop('BBR', axis=1)
     return df
 
 def bbr2camp(df, bbr, das):
+    """Return a datafame with a Campaign Name column added to the input df.
+    The input df requires a BBR column.
+    """
+    
     das_bbr_camp = das[['BBR', 'Campaign Name']].drop_duplicates()
     df = pd.merge(df, das_bbr_camp, how='left', left_on=bbr, right_on='BBR')
     df = df.drop('BBR', axis=1)
     return df
 
 def das_filtered(das, das_month):
-    # Return this month's DAS excluding SEM campaigns. Only CPM & CPUV.
+    """Return a dataframe of this month's DAS excluding SEM campaigns. Only CPM & CPUV.
+    das_month is a string in the form of 'mm/yyyy'.
+    """
+
     df = das[das[das_month] > 0]
     df = df[(df['Price Calculation Type'] == 'CPM') |
             (df['Price Calculation Type'] == 'CPUV')]
@@ -330,6 +349,9 @@ def das_filtered(das, das_month):
 ############################################
 
 def get_exclude_list():
+    """Return a dataframe of the Google Sheet exclude list.
+    These are non-billable creatives under Orders in DFP tht contain 'BBR' in the Order name.
+    """
 
     #################################################################
     spreadsheetId = '10RD_2cF0jytoCBT-2bui1pRBiP9B4UPdB0VWzxsGeg4'
@@ -346,8 +368,10 @@ def get_exclude_list():
     return df
 
 def get_drugs_io_naming(sheet):
-
-    # sheet name is in the str form of year + mo like '201706' for June 2017
+    """Return a dataframe of the Google Sheet drugs.com IO naming table.
+    Each of the internal (Campaign Name, Line Description) has a (Campaign, Placement) for drugs.com IO.
+    sheet is a string in the form of 'yyyymm'.
+    """
 
     #################################################################
     spreadsheetId = '1Mx3F6K1jnf01ra2sjutmia7rMULLNlEacCcHjo98-j0'
@@ -371,6 +395,10 @@ def get_drugs_io_naming(sheet):
 ############################################
 
 def save_in_gdrive(file_name, folder_id, mimetype):
+    """Save a file in a specified Google Drive folder with a specified mimetype.
+    Return the Google Drive file id of a created file.
+    """
+
     service = get_gdrive_service()
 
     file_metadata = {'name': file_name,
@@ -383,6 +411,10 @@ def save_in_gdrive(file_name, folder_id, mimetype):
     return file.get('id')
 
 def save_csv_as_gsheet_in_gdrive(file_name, folder_id, path2csv):
+    """Save a csv in a specified Google Drive folder as a Google Sheet file.
+    Return the Google Drive file id of a created file.
+    """
+
     service = get_gdrive_service()
 
     file_metadata = {'name': file_name,
@@ -397,6 +429,10 @@ def save_csv_as_gsheet_in_gdrive(file_name, folder_id, path2csv):
     return file.get('id')
 
 def save_excel_as_gsheet_in_gdrive(file_name, folder_id, path2excel):
+    """Save an excel in a specified Google Drive folder as a Google Sheet file.
+    Return the Google Drive file id of a created file.
+    """
+
     service = get_gdrive_service()
 
     file_metadata = {'name': file_name,
@@ -411,6 +447,7 @@ def save_excel_as_gsheet_in_gdrive(file_name, folder_id, path2excel):
     return file.get('id')
 
 def delete_in_gdrive(file_id):
+    """Delete a file with a specified file id in Google Drive."""
 
     service = get_gdrive_service()
 
@@ -422,6 +459,7 @@ def delete_in_gdrive(file_id):
     return None
 
 def gdrive_get_file_id_by_name(name, folder_id):
+    """Return the file id of a file with a specified name in a specified Google Drive folder."""
 
     service = get_gdrive_service()
     id = None
@@ -444,6 +482,7 @@ def gdrive_get_file_id_by_name(name, folder_id):
     return id
 
 def gdrive_get_most_recent_file_id(folder_id):
+    """Return the file id of a file with the most recent modified timestamp in a specified Google Drive folder."""
 
     service = get_gdrive_service()
 
@@ -472,6 +511,9 @@ def gdrive_get_most_recent_file_id(folder_id):
     return most_recent_file_id
 
 def gdrive_get_file_info_list(folder_id):
+    """Return a list dictionaries, each of which contains information about a file in a specified Google Drive folder.
+    Each dictionary consists of 'id' (file id), 'name' (file name), and 'last_modified' (last modified timestamp in UTC).
+    """
 
     service = get_gdrive_service()
 
@@ -498,6 +540,7 @@ def gdrive_get_file_info_list(folder_id):
     return folder_content
 
 def gdrive_copy_file(file_id, new_file_name):
+    """Make a copy of a specified file in the same Google Drive folder, and rename it to new_file_name."""
 
     service = get_gdrive_service()
 
@@ -513,6 +556,7 @@ def gdrive_copy_file(file_id, new_file_name):
 ############################################
 
 def gsheet_get_sheet_id_by_name(name, ss_id):
+    """Return a sheet id of a sheet with a specified name in a specified Google Sheet spreadsheet."""
 
     service = get_gsheet_service()
 
@@ -525,6 +569,9 @@ def gsheet_get_sheet_id_by_name(name, ss_id):
     return None
 
 def gsheet_create_sheet(name, ss_id):
+    """Create a new sheet with a specified name in a specified Google Sheet spreadsheet.
+    Return the sheet id of a created sheet.
+    """
 
     service = get_gsheet_service()
 

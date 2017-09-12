@@ -20,6 +20,10 @@ pd.options.mode.chained_assignment = None  # default='warn'
 ###################################################################
 
 def get_dfp_check(last_delivery_date):
+    """Return a dataframe of a MTD DFP report where the Order name contains 'BBR'.
+    Fields for the output are:
+    ORDER_ID, ORDER_NAME, LINE_ITEM_ID, LINE_ITEM_NAME, CREATIVE_ID, DAS Line Item Name (Custom field for creative)
+    """
 
     start_date = last_delivery_date.replace(day=1)
     end_date = last_delivery_date
@@ -71,6 +75,12 @@ def get_dfp_check(last_delivery_date):
     return df
 
 def label_dfp_mtd_all(dfp_mtd_all):
+    """Do the following to an input dataframe, and return:
+    1. If 'Order' contains 'BBR', extract last 6 characters into '(Order) BBR #'.
+    2. Identify non-CPM imps. Add 'Imp Type' for MNT imps (contracts with MNT and not with Healthline), CPA imps, CPUV imps, 
+       Flat-fee imps, non-billable imps (in exclude list), test imps, and default imps.
+    3. Add 'Site'.
+    """
 
     ###########################################################
     # Prep
@@ -159,6 +169,9 @@ def label_dfp_mtd_all(dfp_mtd_all):
 ###################################################################
 
 def label_microsite_uvs(df, mo_year, cpuv_goals_sheet, uv_tracker_rename_dict):
+    """Return a dataframe of microsite uvs labeled with Salesforce info.
+    uv_tracker_rename_dict is from python_path/monthly_setup_yyyy_mm.py
+    """
 
     if len(df) == 0:
         return pd.DataFrame()
@@ -272,6 +285,7 @@ def label_microsite_uvs(df, mo_year, cpuv_goals_sheet, uv_tracker_rename_dict):
     return df
 
 def label_cc_uvs(df, mo_year, cpuv_goals_sheet):
+    """Return a dataframe of competitive conquesting uvs labeled with Salesforce info."""
 
     # site = df['Site'].tolist()[0]
 
@@ -301,7 +315,13 @@ def label_cc_uvs(df, mo_year, cpuv_goals_sheet):
 ###################################################################
 
 def make_all1(cpm, cpuv, temp_fix_das4flat_fee):
+    """Return a dataframe of MTD delivery, both CPM and CPUV combined, labeled with Salesforce info.
+    This attempts to find the best match for DFP imps in Salesforce. Specifically, even if BBR in the Order name is old, 
+    it will try to find the current BBR.
     
+    temp_fix_das4flat_fee is from python_path/monthly_setup_yyyy_mm.py
+    """    
+ 
     # Filter dates for cpuv to match cpm
     last_delivery_date = cpm['Date'].max()
     first_date = last_delivery_date.replace(day=1)
@@ -431,6 +451,11 @@ def make_all1(cpm, cpuv, temp_fix_das4flat_fee):
     return all1
 
 def get_site_goals(mo_year, pas_sheet, cpuv_goals_sheet, ls_correct_rate_dict, temp_fix_das4flat_fee):
+    """Return a dataframe of goals at site level, both CPM and CPUV combined.
+    Also include MTD discrepancy (from PAS) and Site Rate (what we pay to site).
+
+    ls_correct_rate_dict and temp_fix_das4flat_fee are from python_path/monthly_setup_yyyy_mm.py
+    """
 
     das_month = str(mo_year[0]) + '/' + str(mo_year[1])
     das = make_das(use_scheduled_units=False, export=True)
