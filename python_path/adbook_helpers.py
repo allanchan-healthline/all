@@ -265,7 +265,11 @@ def get_ab_campaign_dict_list(all1, site_goals, third_party_imps):
 
             n_days_this_month = line_end_date.day - line_start_date.day + 1
             n_days_passed = last_delivery_date.day - line_start_date.day + 1
-            line_dict['pacing_daily_ave'] = first_party_total / (1.0 * aim_towards / n_days_this_month * n_days_passed)
+            
+            if n_days_passed <= 0:
+                line_dict['pacing_daily_ave'] = 0
+            else:
+                line_dict['pacing_daily_ave'] = first_party_total / (1.0 * aim_towards / n_days_this_month * n_days_passed)
 
             ##################################################################################
             # Pacing group based on daily average needed
@@ -655,7 +659,13 @@ def make_ab_campaign_html(campaign_dict, last_delivery_date, non_html, output_fo
                     with tag('div', klass=line_item_header_klass):
                         with tag('h2'):
                             text('#' + str(int(line_dict['num'])) + ' ' + line_dict['name'] + ' (' + line_dict['oli'] + ')')
-                        
+                       
+                        ###TESTING###
+                        print(campaign_dict['name'], line_dict['name'])
+                        print('pacing yesterday', line_dict['pacing_yesterday'])
+                        print('pacing daily ave', line_dict['pacing_daily_ave'])
+                        #############
+ 
                         pacing_yesterday = line_dict['pacing_yesterday']
                         if pacing_yesterday is not None:
                             pacing_yesterday = int(round(pacing_yesterday * 100))
