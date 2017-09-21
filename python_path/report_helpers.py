@@ -1344,10 +1344,11 @@ def get_partner_revenue_report(all1, site_goals):
     df['Date'] = pd.to_datetime(df['Date'])
 
     ##########################################################################
-    # Cap CPUV delivery if needed
+    # Cap CPUV delivery if needed (All excelp Drugs.com Microsite)
     ##########################################################################
 
-    cap_cpuv_list = site_goals[site_goals['Cap CPUV'] == 'Y']
+    cap_cpuv_list = site_goals[(site_goals['Price Calculation Type'] == 'CPUV') & 
+                               -((site_goals['Site'] == 'Drugs.com') & -(site_goals['DAS Line Item Name'].str.contains('Competitive Conquesting')))]
 
     all_capped_delivery = pd.DataFrame()
     for i in range(len(cap_cpuv_list)):
@@ -1357,8 +1358,8 @@ def get_partner_revenue_report(all1, site_goals):
         brand = cap_cpuv['Brand']
         lin = cap_cpuv['DAS Line Item Name']
 
-        if isinstance(cap_cpuv['Flight Type'], str) and ('Multi-Month' in cap_cpuv['Flight Type']):
-            cap = int(cap_cpuv['Site Goal'] * 1.1)
+        if ('Competitive Conquesting' in cap_cpuv['DAS Line Item Name']) and isinstance(cap_cpuv['Flight Type'], str) and ('Multi-Month' in cap_cpuv['Flight Type']):
+            cap = round(cap_cpuv['Site Goal'] * 1.1, 0)
         else:
             cap = cap_cpuv['Site Goal']
 
