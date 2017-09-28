@@ -4,6 +4,7 @@ from yattag import Doc, indent
 
 import pandas as pd
 import numpy as np
+import math
 from datetime import datetime
 
 pd.options.mode.chained_assignment = None  # default='warn'
@@ -261,7 +262,12 @@ def get_ab_campaign_dict_list(all1, site_goals, third_party_imps):
 
             n_days_this_month = line_end_date.day - line_start_date.day + 1
             n_days_passed = last_delivery_date.day - line_start_date.day + 1
-            line_dict['pacing_daily_ave'] = first_party_total / (1.0 * aim_towards / n_days_this_month * n_days_passed)
+            # try catch block to prevent a divide by zero error
+            try:
+              line_dict['pacing_daily_ave'] = first_party_total / (1.0 * aim_towards / n_days_this_month * n_days_passed)
+            except:
+              #TODO - need to fix this, logic unclear
+              line_dict['pacing_daily_ave'] = 1.0
 
             ##################################################################################
             # Pacing group based on daily average needed
@@ -631,7 +637,12 @@ def make_ab_campaign_html(campaign_dict, last_delivery_date, non_html, output_fo
                         pacing_yesterday = line_dict['pacing_yesterday']
                         if pacing_yesterday is not None:
                             pacing_yesterday = int(round(pacing_yesterday * 100))
-                        pacing_mtd = int(round(line_dict['pacing_daily_ave'] * 100))
+
+                        if math.isfinite(line_dict['pacing_daily_ave']):
+                            pacing_mtd = int(round(line_dict['pacing_daily_ave'] * 100))
+                        else:
+                            pacing_mtd = 0
+                        #pacing_mtd = int(round(line_dict['pacing_daily_ave'] * 100))
 
                         with tag('h4'):
                             if line_dict['hit_goal'] != 1:
