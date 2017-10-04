@@ -14,6 +14,10 @@ pd.options.mode.chained_assignment = None  # default='warn'
 ############################################################################
 
 def get_ab_campaign_dict_list(all1, site_goals, third_party_imps):
+    """Return a tuple of (campaign_dict_list, last_delivery_date).
+    campaign_dict_list is a list of dictionaries where each dictionary contains one campaign's info from Salesforce, 
+    site goals/discrepancies, and MTD delivery. Each line item has its own dictionary in campaign_dict['line_dict_list'].
+    """
 
     ##################################################################################
     # Basics
@@ -262,12 +266,11 @@ def get_ab_campaign_dict_list(all1, site_goals, third_party_imps):
 
             n_days_this_month = line_end_date.day - line_start_date.day + 1
             n_days_passed = last_delivery_date.day - line_start_date.day + 1
-            # try catch block to prevent a divide by zero error
-            try:
-              line_dict['pacing_daily_ave'] = first_party_total / (1.0 * aim_towards / n_days_this_month * n_days_passed)
-            except:
-              #TODO - need to fix this, logic unclear
-              line_dict['pacing_daily_ave'] = 1.0
+            
+            if n_days_passed <= 0:
+                line_dict['pacing_daily_ave'] = 0
+            else:
+                line_dict['pacing_daily_ave'] = first_party_total / (1.0 * aim_towards / n_days_this_month * n_days_passed)
 
             ##################################################################################
             # Pacing group based on daily average needed
@@ -370,7 +373,8 @@ def get_ab_campaign_dict_list(all1, site_goals, third_party_imps):
 ############################################################################
 
 def get_line_info(line_dict):
-    
+    """Return a string to be displayed in a line item header."""
+ 
     # 1. Stage
     line_info = line_dict['stage']
 
@@ -399,6 +403,8 @@ def get_line_info(line_dict):
     return line_info
 
 def get_values_sum_top(header, values_sum):
+    """Return a list of MTD delivery total. One element pre column."""
+
     values_sum_top = []
 
     for i in range(len(header)):
@@ -411,6 +417,8 @@ def get_values_sum_top(header, values_sum):
     return values_sum_top
 
 def get_goals_discs_aims(header, overall_goal, site_goals):
+    """Return 3 lists: goal, MTD discrepancy, and aim towards. One element per column."""
+
     goals = []
     discs = []
     aims = []
@@ -442,6 +450,8 @@ def get_goals_discs_aims(header, overall_goal, site_goals):
     return (goals, discs, aims)
 
 def get_lefts(aims, values_sum_top):
+    """Return a list of # of imps left till hitting the goal. One element pre column."""
+
     lefts = []
 
     for i in range(len(aims)):
@@ -456,6 +466,8 @@ def get_lefts(aims, values_sum_top):
     return lefts
 
 def get_needs_daily_end_n_25(lefts, n_days_till_end, n_days_till_25):
+    """Return 2 lists: # of imps needed per day to hit the goal by the EOM, and by the 25th. One element per column."""
+
     needs_daily_end = []
     needs_daily_25 = []
 
@@ -485,6 +497,8 @@ def get_needs_daily_end_n_25(lefts, n_days_till_end, n_days_till_25):
 
 def get_yesterday_pacing_end_n_25(goals, values, last_delivery_date,
                                   needs_daily_end, needs_daily_25):
+    """Return 2 lists: pacing based on yesterday's delivery if end date is set to the EOM, and to the 25th. One element per column."""
+
     pacing_yesterday_end = []
     pacing_yesterday_25 = []
 
@@ -513,6 +527,8 @@ def get_yesterday_pacing_end_n_25(goals, values, last_delivery_date,
     return (pacing_yesterday_end, pacing_yesterday_25)
 
 def make_pacing_color_list(pacing_list, need_daily_list):
+    """Return a list of strings indicating pacing, to be used for adding css class. One element per column."""
+
     color_list = [None] * len(pacing_list)
 
     for i in range(len(pacing_list)):
@@ -531,6 +547,8 @@ def make_pacing_color_list(pacing_list, need_daily_list):
     return color_list
 
 def make_last_day_color_list(values_sum_top, type, goals, aims):
+    """Return a list of 'hit_goal' or None, to be used for adding css class. One element per column."""
+
     color_last_day = [None] * len(values_sum_top)
 
     for i in range(len(values_sum_top)):
@@ -549,24 +567,32 @@ def make_last_day_color_list(values_sum_top, type, goals, aims):
     return color_last_day
 
 def int_format(x):
+    """Return the integer part of a number. No change to a string."""
+
     if isinstance(x, str):
         return x
     else:
         return '{:,}'.format(int(x))
 
 def percent_format_1(x):
+    """Return a percent-formatted number with 1 decimal place."""
+
     if isinstance(x, str):
         return x
     else:
         return '{0:.1f}%'.format(round(x * 100, 1))
 
 def percent_format_int(x):
+    """Return a percent-formatted number with no decimal place."""
+
     if isinstance(x, str):
         return x
     else:
         return str(int(round(x * 100))) + '%'
 
 def get_col_label_list(header):
+    """Return a list of strings that indicate what kind of column it is, to be used as css class. One element per column."""
+
     col_label_list = []
 
     def extract_site_abbr(col):
@@ -584,6 +610,7 @@ def get_col_label_list(header):
     return col_label_list
 
 def make_ab_campaign_html(campaign_dict, last_delivery_date, non_html, output_folder_name):
+    """Create and save an html file for a specified campaign."""
 
     doc, tag, text = Doc().tagtext()
 
@@ -633,7 +660,13 @@ def make_ab_campaign_html(campaign_dict, last_delivery_date, non_html, output_fo
                     with tag('div', klass=line_item_header_klass):
                         with tag('h2'):
                             text('#' + str(int(line_dict['num'])) + ' ' + line_dict['name'] + ' (' + line_dict['oli'] + ')')
-                        
+                       
+                        ###TESTING###
+                        print(campaign_dict['name'], line_dict['name'])
+                        print('pacing yesterday', line_dict['pacing_yesterday'])
+                        print('pacing daily ave', line_dict['pacing_daily_ave'])
+                        #############
+ 
                         pacing_yesterday = line_dict['pacing_yesterday']
                         if pacing_yesterday is not None:
                             pacing_yesterday = int(round(pacing_yesterday * 100))
@@ -820,11 +853,14 @@ def make_ab_campaign_html(campaign_dict, last_delivery_date, non_html, output_fo
     with open(file_path, 'w') as f:
         f.write(output)
 
+    return
+
 ############################################################################
 # Make index html
 ############################################################################
 
 def make_ab_index_html(campaign_dict_list, non_html, output_folder_name):
+    """Create and save an index html file."""
 
     ############################################################################
     # Prep
@@ -963,6 +999,7 @@ def make_ab_index_html(campaign_dict_list, non_html, output_folder_name):
 ############################################################################
 
 def make_ab_iframes_html(non_html, output_folder_name):
+    """Create and save a home html file, the one with 2 iframes."""
 
     doc, tag, text = Doc().tagtext()
 

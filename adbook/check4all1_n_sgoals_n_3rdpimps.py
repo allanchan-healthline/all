@@ -3,7 +3,8 @@ from path2pickles import *
 from NEW_helpers import *
 
 def main(year, mo):
-
+    """Exit with exit code 7 if adbook needs to be updated. Otherwise exit normally."""
+    
     # Last run
     path_last_run = 'last_run_' + str(year) + '_' + str(mo).zfill(2)
     last_run = get_last_modified_local(path_last_run)
