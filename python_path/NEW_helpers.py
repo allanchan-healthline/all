@@ -581,5 +581,14 @@ def gsheet_create_sheet(name, ss_id):
     sheet_id = result['replies'][0]['addSheet']['properties']['sheetId']
     return sheet_id
 
+def gsheet_delete_sheet(name, ss_id):
+    """Create a sheet with a specified name in a specified Google Sheet spreadsheet."""
 
+    service = get_gsheet_service()
+
+    s_id = gsheet_get_sheet_id_by_name(name, ss_id)
+    request_body = {'requests': [{'deleteSheet': {'sheetId': s_id}}]}
+    result = service.spreadsheets().batchUpdate(spreadsheetId=ss_id, body=request_body).execute()
+
+    return None
 
