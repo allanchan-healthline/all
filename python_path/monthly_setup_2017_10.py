@@ -8,6 +8,7 @@ UV_TRACKER_PATH = {'Drugs.com': '/home/kumiko/always_up2date/uv_trackers/Drugs_M
                    'EmpowHer': '/home/kumiko/always_up2date/uv_trackers/Empowher_Microsite_UV_Tracker - October 2017 V2.xlsx',
                    'HL': '/home/kumiko/always_up2date/uv_trackers/October 2017 CPUV.xlsx',
                    'MNT': '/home/kumiko/always_up2date/uv_trackers/October 2017 CPUV.xlsx'}
+                   'MNT': '/home/fouyang/ad-book/always_up2date/uv_trackers/October 2017 CPUV.xlsx'}
 
 MNT_UV_TRACKER_TABS = ['Humira AS MNT', 'Humira CD MNT', 'Humira PSA MNT', 'Humira PSO MNT',
                        'Humira RA MNT', 'Humira UC MNT']
