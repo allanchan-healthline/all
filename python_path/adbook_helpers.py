@@ -4,6 +4,7 @@ from yattag import Doc, indent
 
 import pandas as pd
 import numpy as np
+import math
 from datetime import datetime
 
 pd.options.mode.chained_assignment = None  # default='warn'
@@ -669,7 +670,12 @@ def make_ab_campaign_html(campaign_dict, last_delivery_date, non_html, output_fo
                         pacing_yesterday = line_dict['pacing_yesterday']
                         if pacing_yesterday is not None:
                             pacing_yesterday = int(round(pacing_yesterday * 100))
-                        pacing_mtd = int(round(line_dict['pacing_daily_ave'] * 100))
+
+                        if math.isfinite(line_dict['pacing_daily_ave']):
+                            pacing_mtd = int(round(line_dict['pacing_daily_ave'] * 100))
+                        else:
+                            pacing_mtd = 0
+                        #pacing_mtd = int(round(line_dict['pacing_daily_ave'] * 100))
 
                         with tag('h4'):
                             if line_dict['hit_goal'] != 1:
