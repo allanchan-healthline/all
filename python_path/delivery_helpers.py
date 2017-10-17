@@ -6,6 +6,7 @@ import os
 import shutil
 import time
 import pickle
+import time
 
 import requests
 
@@ -208,8 +209,7 @@ def get_dfp_mtd_all(last_delivery_date, path_csv, emailed_csv):
 # UVs
 #####################################################
 
-def get_microsite_uvs(site, mo_year, path_excel, cpuv_goals_sheet, mnt_uv_tracker_tabs):
-    wb = opx.load_workbook(path_excel, data_only=True)
+def get_microsite_uvs(site, mo_year, gsheet_file_id, cpuv_goals_sheet, mnt_uv_tracker_tabs):
     cpuv_goals = get_cpuv_goals(mo_year[1], cpuv_goals_sheet)
 
     ###########################################################
@@ -226,7 +226,7 @@ def get_microsite_uvs(site, mo_year, path_excel, cpuv_goals_sheet, mnt_uv_tracke
         sheets = mnt_uv_tracker_tabs
     elif site == 'Drugs.com':
         sheets = []
-        for sheet in wb.get_sheet_names():
+        for sheet in gsheet_get_sheet_names(gsheet_file_id):
             if '(TS)' in sheet:
                 continue
             if '(Treatment Seekers)' in sheet:
@@ -235,17 +235,17 @@ def get_microsite_uvs(site, mo_year, path_excel, cpuv_goals_sheet, mnt_uv_tracke
                 continue
             sheets.append(sheet)
     else:
-        sheets = wb.get_sheet_names()
+        sheets = gsheet_get_sheet_names(gsheet_file_id)
 
     ###########################################################
     # Specify date col and uv col
     ###########################################################
 
-    date_col_num = 2
+    date_col_num = 1  # Count starts at 0
     if site in ['HL', 'MNT']:
-        uv_col_num = 4
-    else:
         uv_col_num = 3
+    else:
+        uv_col_num = 2
 
     ###########################################################
     # Collect UVs
@@ -255,33 +255,51 @@ def get_microsite_uvs(site, mo_year, path_excel, cpuv_goals_sheet, mnt_uv_tracke
     if site == 'MNT':
         site = 'Medical News Today'
 
+    service = get_gsheet_service()
+
     for sheet in sheets:
+
         next_sheet = False
-        
+
         try:
-            ws = wb.get_sheet_by_name(sheet)
-        except KeyError:
-            print('FIX! A tab named ' + sheet + ' is not in the ' + site + ' tracker.')
+            result = service.spreadsheets().values().get(spreadsheetId=gsheet_file_id, range=sheet).execute()
+            values = result.get('values', [])
+        except googleapiclient.errors.HttpError as e:
+            print(e)
+            print('A tab named ' + sheet + ' is not in the ' + site + ' tracker.')
             continue
 
         # Find the 'Date' row
-        r = 1
-        while ws.cell(row=r, column=date_col_num).value != 'Date':
-            r += 1
-            if r == 6:
+        r = 0
+        while True:
+            if r == 5:
                 next_sheet = True
                 break
+
+            if (len(values[r]) > date_col_num) and (values[r][date_col_num] == 'Date'):
+                break
+
+            r += 1
+
         if next_sheet:
             continue
 
         # Extract date and uvs until the 'Total' row
         r += 1
-        while ((ws.cell(row=r, column=date_col_num).value != 'Total') &
-                   (ws.cell(row=r, column=date_col_num + 1).value != 'Total') &
-                   (ws.cell(row=r, column=date_col_num).value != 'Total MTD')):
-            uv = ws.cell(row=r, column=uv_col_num).value
-            uv_list.append([site, sheet, ws.cell(row=r, column=date_col_num).value, uv])
+        while ((values[r][date_col_num] != 'Total') & (values[r][date_col_num] != 'Total MTD')):
+
+            if len(values[r]) > date_col_num+1:
+                if values[r][date_col_num+1] == 'Total':
+                    break
+            if len(values[r]) < uv_col_num+1:
+                uv = 0
+            else:
+                uv = values[r][uv_col_num]
+            uv_list.append([site, sheet, values[r][date_col_num], uv])
             r += 1
+
+        # Sleep to avoid google sheet too-many-requests error
+        time.sleep(1)
 
     uv_df = pd.DataFrame(uv_list, columns=['Site', 'Original Report Tab Name', 'Date', 'UVs'])
 
@@ -291,8 +309,15 @@ def get_microsite_uvs(site, mo_year, path_excel, cpuv_goals_sheet, mnt_uv_tracke
     month_start_date = date(year, mo, 1)
     month_end_date = start_end_month(month_start_date)[1]
 
+    uv_df['Date'] = pd.to_datetime(uv_df['Date'])
     uv_df['Date'] = [(d.date()) for d in uv_df['Date']]
     uv_df = uv_df[(uv_df['Date'] >= month_start_date) & (uv_df['Date'] <= month_end_date)]
+
+    # UVs are in str when pulled from Google Sheet. Make them numeric. Enter zero for non-numeric.
+    uv_df['UVs'] = [(u.replace(',', '') if isinstance(u, str) else u) for u in uv_df['UVs']]
+    uv_df['UVs'] = pd.to_numeric(uv_df['UVs'], errors='coerce')
+    uv_df.loc[pd.isnull(uv_df['UVs']), 'UVs'] = 0
+    uv_df['UVs'] = [int(u) for u in uv_df['UVs']]
 
     return uv_df
 
