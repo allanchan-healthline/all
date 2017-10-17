@@ -13,7 +13,7 @@ def get_gsheet_service():
     # If modifying these scopes, delete your previously saved credentials
     # at ~/.credentials/sheets.googleapis.com-python-quickstart.json
     SCOPES = 'https://www.googleapis.com/auth/spreadsheets'
-    CLIENT_SECRET_FILE = 'client_secret_gsheet.json'
+    CLIENT_SECRET_FILE = '/home/kumiko/python_path/client_secret_gsheet.json'
     APPLICATION_NAME = 'Google Sheets API Python Quickstart'
     #########################################################################
 
@@ -34,9 +34,8 @@ def get_gsheet_service():
         if flags:
             credentials = tools.run_flow(flow, store, flags)
         else: # Needed only for compatibility with Python 2.6
-            credentials = tools.run(flow, store)
+            credentials = tools.run_flow(flow, store)
         print('Storing credentials to ' + credential_path)
-
     http = credentials.authorize(httplib2.Http())
     discoveryUrl = ('https://sheets.googleapis.com/$discovery/rest?'
                     'version=v4')
@@ -50,7 +49,7 @@ def get_gdrive_service():
     # If modifying these scopes, delete your previously saved credentials
     # at ~/.credentials/drive-python-quickstart.json
     SCOPES = 'https://www.googleapis.com/auth/drive'
-    CLIENT_SECRET_FILE = 'client_secret_gdrive.json'
+    CLIENT_SECRET_FILE = '/home/kumiko/python_path/client_secret_gdrive.json'
     APPLICATION_NAME = 'Drive API Python Quickstart'
     #########################################################################
 
@@ -71,7 +70,7 @@ def get_gdrive_service():
         if flags:
             credentials = tools.run_flow(flow, store, flags)
         else: # Needed only for compatibility with Python 2.6
-            credentials = tools.run(flow, store)
+            credentials = tools.run_flow(flow, store)
         print('Storing credentials to ' + credential_path)
 
     http = credentials.authorize(httplib2.Http())
