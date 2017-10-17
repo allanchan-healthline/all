@@ -20,7 +20,7 @@ HAS_CHANGED = {}
 class DataFlow():
     DIR_PICKLES = None
     MONTHLY_SHEET_NAME = None
-    UV_TRACKER_PATH = None
+    UV_TRACKER_GSHEET = None
     MNT_UV_TRACKER_TABS = None
     UV_TRACKER_RENAME_DICT = None
     LS_CORRECT_RATE_DICT = None
@@ -91,7 +91,7 @@ class MicrositeUVs(DataFlow):
         self.dependency_list = []
 
     def get_raw_df(self):
-        return get_microsite_uvs(self.site, self.mo_year, DataFlow.UV_TRACKER_PATH[self.site],
+        return get_microsite_uvs(self.site, self.mo_year, DataFlow.UV_TRACKER_GSHEET[self.site],
                                  DataFlow.MONTHLY_SHEET_NAME['cpuv goals'],
                                  DataFlow.MNT_UV_TRACKER_TABS)
 
@@ -104,7 +104,7 @@ class MicrositeUVs(DataFlow):
 
     def this_has_changed(self):
         pickled = get_last_modified_local(DataFlow.DIR_PICKLES + '/' + self.pickle_name)
-        last_modified = get_last_modified_local(DataFlow.UV_TRACKER_PATH[self.site])
+        last_modified = get_last_modified_local(DataFlow.UV_TRACKER_GSHEET[self.site])
         if pickled is None:
             return True
         elif pickled < last_modified:  # add 1 min extra
