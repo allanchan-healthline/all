@@ -593,3 +593,14 @@ def gsheet_delete_sheet(name, ss_id):
 
     return None
 
+def gsheet_get_sheet_names(ss_id):
+    """Return a list of sheet names in a specified Google Sheet spreadsheet."""
+
+    service = get_gsheet_service()
+
+    sheets = []
+    ss_metadata = service.spreadsheets().get(spreadsheetId=ss_id).execute()
+    for sheet_metadata in ss_metadata['sheets']:
+        sheets.append(sheet_metadata['properties']['title'])
+
+    return sheets
