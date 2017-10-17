@@ -100,7 +100,7 @@ class MicrositeUVs(DataFlow):
 
     def this_has_changed(self):
         pickled = get_last_modified_local(DataFlow.DIR_PICKLES + '/' + self.pickle_name)
-        last_modified = get_last_modified_local(DataFlow.UV_TRACKER_GSHEET[self.site])
+        last_modified = get_last_modified_gdrive(DataFlow.UV_TRACKER_GSHEET[self.site])
         if pickled is None:
             return True
         elif pickled < last_modified:  # add 1 min extra
