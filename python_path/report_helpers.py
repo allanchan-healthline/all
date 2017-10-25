@@ -1611,3 +1611,131 @@ def up_check_mapping2gsheet(check_mapping_dict):
                                                         body={'values': values}).execute()
     return None
 
+###################################################################
+# Drugs.com CPM MTD delivery per Campaign/Placement along with
+# Aim Towards and pacing
+###################################################################
+
+def getdrugs_mtd(all1, site_goals):
+
+    ##########################################################################
+    # Prep
+    ##########################################################################
+
+    max_date = all1['Date'].max()
+    mo = max_date.month
+    year = max_date.year
+    das_month = str(mo) + '/' + str(year)
+    
+    df = all1[(all1['Site'] == 'Drugs.com') & (all1['Price Calculation Type'] == 'CPM') &
+              (all1['Impressions/UVs'] > 0) & (pd.notnull(all1['Impressions/UVs']))]
+
+    groupby_col = ['(DAS)BBR #', 'Brand', 'DAS Line Item Name']
+    values_col = ['Impressions/UVs']
+    df = df[groupby_col + values_col].groupby(groupby_col).sum().reset_index()
+    
+    df = df.rename(columns={'(DAS)BBR #': 'BBR'})
+
+    ##########################################################################
+    # Add Site Goal & MTD disc
+    ##########################################################################
+
+    drugs_site_goals = site_goals[site_goals['Site'] == 'Drugs.com']
+    join_on = ['BBR', 'Brand', 'DAS Line Item Name']
+    df = pd.merge(df, drugs_site_goals[join_on + ['Site Goal', 'MTD Disc']], how='left', on=join_on)
+    
+    ##########################################################################
+    # Add Aim Towards
+    ##########################################################################
+    
+    def add_aim_towards(row):
+        goal = row['Site Goal']
+        disc = row['MTD Disc']
+        
+        if goal is None:
+            return None
+        if disc is None:
+           disc = 0
+        return goal/(1-disc)
+
+    df['Aim Towards'] = df.apply(lambda row: add_aim_towards(row), axis=1)
+
+    ##########################################################################
+    # Add Campaign Start Date and End Date
+    ##########################################################################
+
+    das = make_das(False, False)
+    das_thismonth = das_filtered(das, das_month)
+
+    rename_dict = {'Line Description': 'DAS Line Item Name'}
+    join_on = ['BBR', 'Brand', 'DAS Line Item Name']
+    to_add = ['Start Date', 'End Date']
+
+    df = pd.merge(df, das_thismonth.rename(columns=rename_dict)[join_on + to_add], how='left', on=join_on)
+
+    ##########################################################################
+    # Add Daily Ave Pacing
+    ##########################################################################
+
+    mo_start_date, mo_end_date = start_end_month(max_date)
+
+    if max_date.day < 25:
+        mo_end_date = date(mo_end_date.year, mo_end_date.month, 25)
+
+    df['Campaign Start Date'] = [mo_start_date if sd <= mo_start_date else sd for sd in df['Start Date']]
+    df['Campaign End Date'] = [mo_end_date if ed >= mo_end_date else ed for ed in df['End Date']]
+    df['Days'] = df.apply(lambda row: (row['Campaign End Date'] - row['Campaign Start Date']).days + 1, axis=1)
+    df['Past Days'] = df.apply(lambda row: (max_date - row['Campaign Start Date']).days + 1, axis=1)
+    df.loc[df['Past Days'] < 0, 'Past Days'] = 0
+
+    df['Pacing (Daily Ave)'] = df['Impressions/UVs']/(df['Aim Towards']/df['Days']*df['Past Days'])
+    df.loc[df['Past Days'] == 0, 'Pacing (Daily Ave)'] = 'Not yet started'
+
+    ##########################################################################
+    # Add Daily Ave Needed
+    ##########################################################################
+
+    df['Need (Daily Ave)'] = (df['Aim Towards']-df['Impressions/UVs'])/(df['Days']-df['Past Days'])
+
+    ##########################################################################
+    # Add Yesterday's delivery
+    ##########################################################################
+
+    
+
+    ##########################################################################
+    # Add Campaign Name and Drugs IO Naming
+    ##########################################################################
+
+    das_bbr_camp = make_das(False, False)[['BBR', 'Campaign Name']].drop_duplicates()
+    df = pd.merge(df, das_bbr_camp, how='left', on='BBR')
+
+    sheet_name = str(max_date.year) + str(max_date.month).zfill(2)
+    drugs_io_naming = get_drugs_io_naming(sheet_name)
+    col = ['Internal Campaign Name', 'Campaign Name', 'Line Description', 'Placement']
+    drugs_io_naming = drugs_io_naming[col]
+
+    df = df.rename(columns={'Campaign Name': 'Internal Campaign Name',
+                            'DAS Line Item Name': 'Line Description'})
+    join_on = ['Internal Campaign Name', 'Line Description']
+    df = pd.merge(df, drugs_io_naming, how='left', on=join_on)
+
+    ##########################################################################
+    # Clean up
+    ##########################################################################
+
+    #col = ['Campaign Name', 'Placement', 'Impressions/UVs', 'Aim Towards', 'Site Goal', 'MTD Disc', 'Start Date', 'End Date']
+    #sortby = ['Campaign Name', 'Placement']
+
+    #df = df[col].sort_values(sortby)
+
+    df.to_csv('test_getdrugs_mtd.csv')
+
+def up_drugs_mtd(df):
+
+    ###################################################################
+    folder_id = '0B71ox_2Qc7gmQUFPZmQyRTBnX1E'
+    ###################################################################
+
+
+
