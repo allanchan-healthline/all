@@ -23,6 +23,6 @@ with open(DIR_PICKLES + '/' + 'site_goals.pickle', 'rb') as f:
 ############################################################################
 
 drugs_mtd_dict = get_drugs_mtd_dict(all1, site_goals)
-up_drugs_mtd(drugs_mtd_dict)
-
+ss_id = up_drugs_mtd(drugs_mtd_dict)
+format_drugs_mtd(ss_id)
 
