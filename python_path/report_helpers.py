@@ -1611,3 +1611,313 @@ def up_check_mapping2gsheet(check_mapping_dict):
                                                         body={'values': values}).execute()
     return None
 
+###################################################################
+# Drugs.com CPM MTD delivery per Campaign/Placement along with
+# Aim Towards and pacing
+###################################################################
+
+def get_drugs_mtd_dict(all1, site_goals):
+
+    ##########################################################################
+    # Prep
+    ##########################################################################
+
+    max_date = all1['Date'].max()
+    mo = max_date.month
+    year = max_date.year
+    das_month = str(mo) + '/' + str(year)
+    
+    df = all1[(all1['Site'] == 'Drugs.com') & (all1['Price Calculation Type'] == 'CPM') &
+              (all1['Impressions/UVs'] > 0) & (pd.notnull(all1['Impressions/UVs']))]
+
+    groupby_col = ['(DAS)BBR #', 'Brand', 'DAS Line Item Name']
+    values_col = ['Impressions/UVs']
+    df = df[groupby_col + values_col].groupby(groupby_col).sum().reset_index()
+    
+    df = df.rename(columns={'(DAS)BBR #': 'BBR'})
+
+    ##########################################################################
+    # Add Site Goal & MTD disc
+    ##########################################################################
+
+    drugs_site_goals = site_goals[site_goals['Site'] == 'Drugs.com']
+    join_on = ['BBR', 'Brand', 'DAS Line Item Name']
+    df = pd.merge(df, drugs_site_goals[join_on + ['Site Goal', 'MTD Disc']], how='left', on=join_on)
+    
+    ##########################################################################
+    # Add Aim Towards
+    ##########################################################################
+    
+    def add_aim_towards(row):
+        goal = row['Site Goal']
+        disc = row['MTD Disc']
+        
+        if goal is None:
+            return None
+        if disc is None:
+           disc = 0
+        return goal/(1-disc)
+
+    df['Aim Towards'] = df.apply(lambda row: add_aim_towards(row), axis=1)
+
+    ##########################################################################
+    # Add Campaign Start Date and End Date
+    ##########################################################################
+
+    das = make_das(False, False)
+    das_thismonth = das_filtered(das, das_month)
+
+    rename_dict = {'Line Description': 'DAS Line Item Name'}
+    to_add = ['Start Date', 'End Date']
+
+    df = pd.merge(df, das_thismonth.rename(columns=rename_dict)[join_on + to_add], how='left', on=join_on)
+
+    ##########################################################################
+    # Add Daily Ave Pacing
+    ##########################################################################
+
+    mo_start_date, mo_end_date = start_end_month(max_date)
+    real_mo_end_date = mo_end_date
+    mo_end_date = date(mo_end_date.year, mo_end_date.month, 25)  # Where possible, Drugs aim to complete a campaign/line by 25th
+
+    df['Campaign Start Date'] = [mo_start_date if sd <= mo_start_date else sd for sd in df['Start Date']]
+    df['Real Campaign End Date'] = [real_mo_end_date if ed >= real_mo_end_date else ed for ed in df['End Date']]
+    df['Campaign End Date'] = [mo_end_date if ed >= mo_end_date else ed for ed in df['End Date']]
+    df['Days'] = df.apply(lambda row: (row['Campaign End Date'] - row['Campaign Start Date']).days + 1, axis=1)
+    df['Past Days'] = df.apply(lambda row: (max_date - row['Campaign Start Date']).days + 1, axis=1)
+    df.loc[df['Past Days'] < 0, 'Past Days'] = 0
+
+    df['Pacing (Daily Ave)'] = df['Impressions/UVs']/(df['Aim Towards']/df['Days']*df['Past Days'])
+
+    ##########################################################################
+    # Add Daily Ave Needed
+    ##########################################################################
+
+    df['Left'] = df['Aim Towards'] - df['Impressions/UVs']
+    df.loc[df['Left'] < 0, 'Left'] = 0
+
+    df['Need (Daily Ave)'] = df['Left']/(df['Days']-df['Past Days'])
+
+    ##########################################################################
+    # Add Yesterday's delivery & Pacing based on yesterday's delivery
+    ##########################################################################
+    
+    daily = all1[(all1['Site'] == 'Drugs.com') & (all1['Price Calculation Type'] == 'CPM') &
+              (all1['Impressions/UVs'] > 0) & (pd.notnull(all1['Impressions/UVs'])) & 
+              (all1['Date'] == max_date)]
+
+    groupby_col = ['(DAS)BBR #', 'Brand', 'DAS Line Item Name']
+    values_col = ['Impressions/UVs']
+    daily = daily[groupby_col + values_col].groupby(groupby_col).sum().reset_index()
+
+    daily = daily.rename(columns={'(DAS)BBR #': 'BBR', 'Impressions/UVs': 'Yesterday Delivery'})
+    df = pd.merge(df, daily, how='left', on=join_on)
+
+    df['Pacing (Yesterday)'] = df['Yesterday Delivery']/df['Need (Daily Ave)']
+    
+    ##########################################################################
+    # Comments
+    ##########################################################################
+
+    cols = ('Pacing (Daily Ave)', 'Need (Daily Ave)', 'Pacing (Yesterday)')    
+
+    df.loc[df['Impressions/UVs'] > df['Aim Towards'], cols] = 'Hit the goal'
+    df.loc[df['Past Days'] == 0, cols] = 'Not yet started'
+    df.loc[df['Campaign End Date'] <= max_date, cols] = 'Ended'
+
+    ##########################################################################
+    # Add Campaign Name and Drugs IO Naming
+    ##########################################################################
+
+    das_bbr_camp = make_das(False, False)[['BBR', 'Campaign Name']].drop_duplicates()
+    df = pd.merge(df, das_bbr_camp, how='left', on='BBR')
+
+    sheet_name = str(max_date.year) + str(max_date.month).zfill(2)
+    drugs_io_naming = get_drugs_io_naming(sheet_name)
+    col = ['Internal Campaign Name', 'Campaign Name', 'Line Description', 'Placement']
+    drugs_io_naming = drugs_io_naming[col]
+
+    df = df.rename(columns={'Campaign Name': 'Internal Campaign Name',
+                            'DAS Line Item Name': 'Line Description'})
+    join_on = ['Internal Campaign Name', 'Line Description']
+    df = pd.merge(df, drugs_io_naming, how='left', on=join_on)
+
+    ##########################################################################
+    # Clean up
+    ##########################################################################
+
+    df = df[pd.notnull(df['Site Goal'])]
+
+    if max_date.day < 25:
+        col = ['Campaign Name', 'Placement', 'Impressions/UVs', 'Aim Towards', 'Left', 'Need (Daily Ave)', 'Pacing (Daily Ave)', 
+               'Yesterday Delivery', 'Pacing (Yesterday)', 'Site Goal', 'MTD Disc', 'Campaign End Date']
+        rename_dict = {'Impressions/UVs': 'HL DFP MTD', 'Campaign End Date': 'End Date (Max 25th)'}
+    else:
+        col = ['Campaign Name', 'Placement', 'Impressions/UVs', 'Aim Towards', 'Left',
+               'Yesterday Delivery', 'Site Goal', 'MTD Disc', 'Real Campaign End Date']
+        rename_dict = {'Impressions/UVs': 'HL DFP MTD', 'Real Campaign End Date': 'End Date'}
+      
+    sortby = ['Campaign Name', 'Placement']
+    df = df[col].sort_values(sortby).rename(columns=rename_dict)
+
+    return {'df': df, 'max date': max_date}
+
+def up_drugs_mtd(drugs_mtd_dict):
+
+    ###################################################################
+    folder_id = '0B71ox_2Qc7gmQUFPZmQyRTBnX1E'
+    ###################################################################
+
+    ############################################
+    # Create a new google sheet
+    ############################################
+    
+    gdrive_service = get_gdrive_service()
+    gsheet_service = get_gsheet_service()
+
+    max_date = drugs_mtd_dict['max date']
+    year = str(max_date.year)
+    mo = str(max_date.month).zfill(2)
+    day = str(max_date.day).zfill(2)
+
+    file_data = {'name': 'Drugs.com_CPM_MTD_HL_DFP_Imps_Through_' + year + '_' + mo + '_' + day,
+                 'parents': [folder_id],
+                 'mimeType': 'application/vnd.google-apps.spreadsheet'}
+    file_info = gdrive_service.files().create(body=file_data).execute()
+    file_id = file_info['id']
+
+    ############################################
+    # Upload
+    ############################################
+
+    df = drugs_mtd_dict['df']
+    df = df.fillna('')
+
+    # Upload isn't doable with date type
+    for col in df.columns.tolist():
+        if 'End Date' in col:
+            df[col] = [str(d) for d in df[col]]
+
+    values = [df.columns.tolist()] + df.values.tolist()
+    result = gsheet_service.spreadsheets().values().update(spreadsheetId=file_id, range='Sheet1',
+                                                           valueInputOption='USER_ENTERED', body={'values': values}).execute()
+    
+    return file_id
+
+def format_drugs_mtd(file_id):
+   
+    service = get_gsheet_service()
+    sheet_name = 'Sheet1' 
+
+    # Find the sheet id and basic info
+    sheet_id = gsheet_get_sheet_id_by_name(sheet_name, file_id)
+    
+    # Get values > header, # of col, # of row
+    result = service.spreadsheets().values().get(spreadsheetId=file_id, range=sheet_name, valueRenderOption='UNFORMATTED_VALUE').execute()
+    values = result.get('values', [])
+
+    header = values[0]
+    n_col = len(header)
+    n_row = len(values)
+
+    # Freeze top row and left colums
+    freeze = [{'updateSheetProperties': {'properties': {'sheetId': sheet_id,
+                                                        'gridProperties': {'frozenRowCount': 1}},
+                                         'fields': 'gridProperties(frozenRowCount)'}}]
+
+    # Wrap header
+    wrap = [{'updateCells': {'rows': [{'values': [{'userEnteredFormat': {'wrapStrategy': 'WRAP'}}] * n_col}],
+                             'fields': 'userEnteredFormat.wrapStrategy',
+                             'range': {'sheetId': sheet_id,
+                                       'startRowIndex': 0,
+                                       'endRowIndex': 1,
+                                       'startColumnIndex': 0,
+                                       'endColumnIndex': n_col}}}]
+
+    # Font
+    font = [{'updateCells': {'rows': [{'values': [{'userEnteredFormat': {'textFormat': {'fontFamily': 'Roboto',
+                                                                                        'fontSize': 10}}}] * n_col}] * n_row,
+                             'fields': 'userEnteredFormat.textFormat(fontFamily, fontSize)',
+                             'range': {'sheetId': sheet_id,
+                                       'startRowIndex': 0,
+                                       'endRowIndex': n_row,
+                                       'startColumnIndex': 0,
+                                       'endColumnIndex': n_col}}}]
+    
+    # Value formatting
+    def make_vf_dict(sheet_name, col, format_type):
+        i_col = header.index(col)
+
+        if format_type == 'integer':
+            pattern = '###,###,##0'
+        elif format_type == 'percent':
+            pattern = '#0.0%'
+        
+        return {'repeatCell': {'range': {'sheetId': sheet_id,
+                                         'startRowIndex': 1,
+                                         'endRowIndex': n_row,
+                                         'startColumnIndex': i_col,
+                                         'endColumnIndex': i_col+1},
+                               'cell': {'userEnteredFormat': {'numberFormat': {'type': 'NUMBER',
+                                                                               'pattern': pattern}}},
+                               'fields': 'userEnteredFormat.numberFormat'}} 
+    
+    int_col = ['HL DFP MTD', 'Aim Towards', 'Left', 'Need (Daily Ave)', 'Yesterday Delivery', 'Site Goal'] 
+    percent_col = ['Pacing (Daily Ave)', 'Pacing (Yesterday)', 'MTD Disc']
+
+    value_formatting = []
+    for col in int_col:
+        if col in header:
+            value_formatting.append(make_vf_dict(sheet_name, col, 'integer'))
+    for col in percent_col:
+        if col in header:
+            value_formatting.append(make_vf_dict(sheet_name, col, 'percent'))
+
+    # Header color
+    def make_color_header_dict(sheet_name, col, color):
+        i_col = header.index(col)
+
+        if color == 'green':
+            color_dict = {'red': .851, 'green': .918, 'blue': .827, 'alpha': 1}
+        elif color == 'yellow':
+            color_dict = {'red': 1, 'green': .949, 'blue': .8, 'alpha': 1}
+        else:
+            color_dict = {'red': .953, 'green': .953, 'blue': .953, 'alpha': 1}
+ 
+        return {'updateCells': {'rows': [{'values': [{'userEnteredFormat': {'backgroundColor': color_dict}}]}],
+                                'fields': 'userEnteredFormat.backgroundColor',
+                                'range': {'sheetId': sheet_id,
+                                          'startRowIndex': 0,
+                                          'endRowIndex': 1,
+                                          'startColumnIndex': i_col,
+                                          'endColumnIndex': i_col+1}}}
+
+    green_col = ['Campaign Name', 'Placement', 'HL DFP MTD', 'Aim Towards', 'Left']
+    yellow_col = ['Need (Daily Ave)', 'Pacing (Daily Ave)', 'Yesterday Delivery', 'Pacing (Yesterday)']
+    grey_col = ['Site Goal', 'MTD Disc', 'End Date (Max 25th)', 'End Date']
+
+    color_header = []
+    for col in green_col:
+        if col in header:
+            color_header.append(make_color_header_dict(sheet_name, col, 'green'))
+    for col in yellow_col:
+        if col in header:
+            color_header.append(make_color_header_dict(sheet_name, col, 'yellow'))
+    for col in grey_col:
+        if col in header:
+            color_header.append(make_color_header_dict(sheet_name, col, 'grey'))
+
+    # Column width
+    i_col = header.index('Placement')
+    width = [{'updateDimensionProperties': {'range': {'sheetId': sheet_id,
+                                                      'dimension': 'COLUMNS',
+                                                      'startIndex': i_col,
+                                                      'endIndex': i_col+1},
+                                            'properties': {'pixelSize': 175},
+                                            'fields': 'pixelSize'}}]
+
+    # Send requests
+    all_requests = freeze + wrap + font + value_formatting + color_header + width
+    result = service.spreadsheets().batchUpdate(spreadsheetId=file_id, body={'requests': all_requests}).execute()
+
+ 
