@@ -48,7 +48,7 @@ def get_arguments(argv, desc, parents=None):
 
 def setup(flags):
   API_NAME = 'dfareporting'
-  API_VERSION = 'v2.7'
+  API_VERSION = 'v2.8'
   API_SCOPES = ['https://www.googleapis.com/auth/dfareporting',
                 'https://www.googleapis.com/auth/dfatrafficking',
                 'https://www.googleapis.com/auth/ddmconversions']
