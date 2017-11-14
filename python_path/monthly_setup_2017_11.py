@@ -1,4 +1,3 @@
-
 MO_YEAR = (11, 2017)
 
 MONTHLY_SHEET_NAME = {'pas': 'Nov', 'cpuv goals': 'Nov'}
@@ -44,8 +43,10 @@ PARTNER_CAPPING_SP_CASE = [
     ('Drugs.com', '17-031', 'Cialis', 'D m.D Competitive Conquesting (Cialis, non-exclusive)', 26000),
     ('Drugs.com', '17-006', 'Kisqali', 'HL D GoodRx m.HL m.D Competitive Conquesting', 5757),
     ('GoodRx', '17-006', 'Kisqali', 'HL D GoodRx m.HL m.D Competitive Conquesting', 3733),
-    ('Drugs.com', '17-147', 'Trintellix', 'D GoodRx m.D Competitive Conquesting (Non-exclusive, See list)', 4000),
-    ('GoodRx', '17-147', 'Trintellix', 'D GoodRx m.D Competitive Conquesting (Non-exclusive, See list)', 2000)]
+    ('Drugs.com', '17-147', 'Trintellix', 'D GoodRx m.D Competitive Conquesting (Non-exclusive, See list)', 5250),
+    ('GoodRx', '17-147', 'Trintellix', 'D GoodRx m.D Competitive Conquesting (Non-exclusive, See list)', 2000), 
+    ('Drugs.com', '17-102', 'Xiafle', 'D GoodRx m.D Competitive Conquesting (Xiaflex)', 640), 
+    ('GoodRx', '17-102', 'Xiafle', 'D GoodRx m.D Competitive Conquesting (Xiaflex)', 100)]
 
 def ADD_SPECIAL_CASE(df):
     df.loc[(df['Brand'] == 'Cialis') &

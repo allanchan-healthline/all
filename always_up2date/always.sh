@@ -1,16 +1,20 @@
 #!/bin/bash
 
+# root path for AdBook
+ROOT=$(dirname $(dirname "$(readlink -f "$0")"))
+
 # Logging
 LOG_START_TIME=$(date '+%Y-%m-%d-%H-%M-%S')
 SCRIPT_NAME=$(basename $0)
-LOG_FILE_NAME="/home/kumiko/logs/${LOG_START_TIME}_${SCRIPT_NAME/.sh/.log}"
+LOG_FILE_NAME="${ROOT}/logs/${LOG_START_TIME}_${SCRIPT_NAME/.sh/.log}"
+
 echo "${LOG_START_TIME} Start" > $LOG_FILE_NAME
 
 # Main
 export PATH="/usr/local/anaconda3/bin:$PATH"
-export PYTHONPATH="/home/kumiko/python_path"
+export PYTHONPATH="${ROOT}/python_path"
 
-DIR="/home/kumiko/always_up2date"
+DIR="${ROOT}/always_up2date"
 cd $DIR
 
 CURRENT_MONTH=`date "+%Y_%m"`
@@ -26,7 +30,7 @@ do
     else
         touch $RUNNING
         FILE="always_up2date_$YEAR_MO.py"
-        python $FILE 
+        python $FILE
         rm $RUNNING
     fi
 done
