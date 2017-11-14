@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # root path for AdBook
-ROOT=$(dirname $(dirname $0))
+ROOT=$(dirname $(dirname "$(readlink -f "$0")"))
 
 export PATH="/usr/local/anaconda3/bin:$PATH"
 export PYTHONPATH="${ROOT}/python_path"
