@@ -179,7 +179,7 @@ def get_dfp_map(start_date, end_date):
     saved_query_id = '10004299282'
 
     # Initialize a client
-    client = dfp.DfpClient.LoadFromStorage()
+    client = dfp.DfpClient.LoadFromStorage(os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + "/googleads.yaml")
 
     # Initialize appropriate service.
     report_service = client.GetService('ReportService', version='v201705')

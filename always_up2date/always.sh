@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # root path for AdBook
-ROOT=$(dirname $(dirname $0))
+ROOT=$(dirname $(dirname "$(readlink -f "$0")"))
 
 # Logging
 LOG_START_TIME=$(date '+%Y-%m-%d-%H-%M-%S')
@@ -27,7 +27,7 @@ do
     else
         touch $RUNNING
         FILE="always_up2date_$YEAR_MO.py"
-        python $FILE 
+        python $FILE
         rm $RUNNING
     fi
 done

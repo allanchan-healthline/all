@@ -36,7 +36,7 @@ def get_dfp_check(last_delivery_date):
     #     Creative ID, DAS Line Item Name
     ########################################################
 
-    dfp_client = dfp.DfpClient.LoadFromStorage()
+    dfp_client = dfp.DfpClient.LoadFromStorage(os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + "/googleads.yaml")
     filter_statement = {'query': "WHERE ORDER_NAME LIKE '%BBR%'"}
 
     report_job = {

@@ -39,10 +39,10 @@ def run_dfp_mtd_all_query(last_delivery_date):
     output_file_name = 'temp_dfp_mtd_all.csv'
 
     # Report query id
-    saved_query_id = '10000261152'
+    saved_query_id = '10033208648'   #this Fon's duplicated query 
 
     # Initialize a client
-    client = dfp.DfpClient.LoadFromStorage()
+    client = dfp.DfpClient.LoadFromStorage(os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + "/googleads.yaml")
 
     # Initialize appropriate service.
     report_service = client.GetService('ReportService', version='v201705')
@@ -135,7 +135,7 @@ def get_dfp_today_delivery():
     # Get Order Name, Line Item Name, Creative Name, DAS Line Item Name
     ########################################################
 
-    dfp_client = dfp.DfpClient.LoadFromStorage()
+    dfp_client = dfp.DfpClient.LoadFromStorage(os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + "/googleads.yaml")
     filter_statement = {'query': "WHERE ORDER_NAME LIKE '%BBR%'"}
 
     report_job = {
@@ -407,7 +407,6 @@ def dcm_reporting(start_date, end_date):
 
     ######################################################
 
-    print(datetime.now())
 
     output_folder_name = 'DCM Reports'
     if os.path.exists(output_folder_name):
@@ -643,8 +642,6 @@ def dcm_reporting(start_date, end_date):
 
     grouped_all_data = grouped_all_data.groupby(['Account ID', 'Campaign', 'Placement w/o Size']).sum().reset_index()
     grouped_all_data['Click Rate'] = grouped_all_data['Clicks'] / grouped_all_data['Impressions'] * 100
-
-    print(datetime.now())
 
     # Save to pickle
     with open(DIR_PICKLES + '/' + pickle_file_name, 'wb') as f:
@@ -926,7 +923,7 @@ def get_dcm_placement_ids(end_date):
     saved_query_id = '10002557419'
 
     # Initialize a client
-    client = dfp.DfpClient.LoadFromStorage()
+    client = dfp.DfpClient.LoadFromStorage(os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + "/googleads.yaml")
 
     # Initialize appropriate service.
     report_service = client.GetService('ReportService', version='v201705')
