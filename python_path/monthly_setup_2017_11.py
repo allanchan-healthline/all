@@ -1,13 +1,13 @@
 
-MO_YEAR = (9, 2017)
+MO_YEAR = (11, 2017)
 
-MONTHLY_SHEET_NAME = {'pas': 'Sep', 'cpuv goals': 'Sept'}
+MONTHLY_SHEET_NAME = {'pas': 'Nov', 'cpuv goals': 'Nov'}
 
-UV_TRACKER_PATH = {'Drugs.com': '/home/kumiko/always_up2date/uv_trackers/Drugs com_Microsite_UV_Tracker - September 2017 V2.xlsx',
-                   'Livestrong': '/home/kumiko/always_up2date/uv_trackers/Livestrong_Microsite_UV_Tracker - September 2017 V2.xlsx',
-                   'EmpowHer': '/home/kumiko/always_up2date/uv_trackers/EmpowHER Microsite_UV_Tracker - September 2017.xlsx',
-                   'HL': '/home/kumiko/always_up2date/uv_trackers/September 2017 CPUV.xlsx',
-                   'MNT': '/home/kumiko/always_up2date/uv_trackers/September 2017 CPUV.xlsx'}
+UV_TRACKER_GSHEET = {'Drugs.com': '1gJ0HtjQ4GKVEluwK9ZkCrIoUgQ7O8k3Uy61-qW7kdTM',
+                     'Livestrong': '1N2C6GyQHf9VeS-S0hadznCUeHLVDILHOHxowumOBA4o',
+                     'EmpowHer': '1E6joonYUXVjcAUe9jCYwY-O7KyJJrex6Wm6vvNKbaAA',
+                     'HL': '1nmQxUMXVW-q_WhqoDI8Sl-bNfGpVFJjbE0w9EN9Ui0Y',
+                     'MNT': '1nmQxUMXVW-q_WhqoDI8Sl-bNfGpVFJjbE0w9EN9Ui0Y'}
 
 MNT_UV_TRACKER_TABS = ['Humira AS MNT', 'Humira CD MNT', 'Humira PSA MNT', 'Humira PSO MNT',
                        'Humira RA MNT', 'Humira UC MNT']
@@ -44,10 +44,8 @@ PARTNER_CAPPING_SP_CASE = [
     ('Drugs.com', '17-031', 'Cialis', 'D m.D Competitive Conquesting (Cialis, non-exclusive)', 26000),
     ('Drugs.com', '17-006', 'Kisqali', 'HL D GoodRx m.HL m.D Competitive Conquesting', 5757),
     ('GoodRx', '17-006', 'Kisqali', 'HL D GoodRx m.HL m.D Competitive Conquesting', 3733),
-    ('Drugs.com', '17-147', 'Trintellix', 'D GoodRx m.D Competitive Conquesting (Non-exclusive, See list)', 5250),
-    ('GoodRx', '17-147', 'Trintellix', 'D GoodRx m.D Competitive Conquesting (Non-exclusive, See list)', 2000), 
-    ('Drugs.com', '17-102', 'Xiafle', 'D GoodRx m.D Competitive Conquesting (Xiaflex)', 640), 
-    ('GoodRx', '17-102', 'Xiafle', 'D GoodRx m.D Competitive Conquesting (Xiaflex)', 100)]
+    ('Drugs.com', '17-147', 'Trintellix', 'D GoodRx m.D Competitive Conquesting (Non-exclusive, See list)', 4000),
+    ('GoodRx', '17-147', 'Trintellix', 'D GoodRx m.D Competitive Conquesting (Non-exclusive, See list)', 2000)]
 
 def ADD_SPECIAL_CASE(df):
     df.loc[(df['Brand'] == 'Cialis') &

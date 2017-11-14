@@ -680,6 +680,8 @@ def up_das_agg2gsheet(das_aggregated_dict):
         # Replace MTD
         ####################################################################
 
+        print(sheet)
+
         df['Date'] = pd.to_datetime(df['Date']).dt.date
         existing['Date'] = [(date(1900, 1, 1) + timedelta(days=int(d) - 2)) for d in
                             existing['Date']]  # GoogleSheet date is in the integer form

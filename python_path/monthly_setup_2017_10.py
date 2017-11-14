@@ -10,7 +10,7 @@ UV_TRACKER_GSHEET = {'Drugs.com': '1rs5QwU9CuXZ4VuO6yv9VdYMxsCw04BdJjbXgpPqVJEQ'
                      'MNT': '1hQMk-cpceec4upPTTwxkJT3x6fJ9mFd5-l7ZF6UyD0M'}
 
 MNT_UV_TRACKER_TABS = ['Humira AS MNT', 'Humira CD MNT', 'Humira PSA MNT', 'Humira PSO MNT',
-                       'Humira RA MNT', 'Humira UC MNT']
+                       'Humira RA MNT', 'Humira UC MNT', 'Livalo MNT']
 
 LS_CORRECT_RATE_DICT = {'Duopa': 1.00,
                         'Dupixent': 1.00,
@@ -31,7 +31,8 @@ UV_TRACKER_RENAME_DICT = {'Drugs.com': {},
                                                  'Humira PSA MNT': 'Humira PsA',
                                                  'Humira PSO MNT': 'Humira PsO',
                                                  'Humira RA MNT': 'Humira R.A.',
-                                                 'Humira UC MNT': 'Humira UC'}}
+                                                 'Humira UC MNT': 'Humira UC', 
+                                                 'Livalo MNT': 'Livalo'}}
 
 def TEMP_FIX_DAS4FLAT_FEE(das):
     das = das.copy()

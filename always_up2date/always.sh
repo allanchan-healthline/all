@@ -13,7 +13,7 @@ export PYTHONPATH="/home/kumiko/python_path"
 DIR="/home/kumiko/always_up2date"
 cd $DIR
 
-for YEAR_MO in "2017_09" "2017_08"
+for YEAR_MO in "2017_11" "2017_10"
 do
     echo "$(date '+%Y-%m-%d-%H-%M-%S') For loop YEAR_MO=${YEAR_MO} Start" >> $LOG_FILE_NAME
     RUNNING="running_$YEAR_MO"
