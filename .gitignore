@@ -3,14 +3,11 @@
 
 Anaconda3-4.4.0-Linux-x86_64.sh
 
-.credentials/*.json
-
-adbook/
+.credentials/
 
 always_up2date/das.csv
 always_up2date/monthly_setup_*_last_checked
 always_up2date/__pycache__
-#always_up2date/uv_trackers/
 
 daily_runs/DAS\ Agg\ Backup/
 daily_runs/DCM Reports/
