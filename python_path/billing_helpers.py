@@ -740,7 +740,25 @@ def get_bg(year, mo):
 
     df = pd.DataFrame(values[1: len(values) - 1], columns=values[0])  # Exclude the last row (Grand Total)
     return df   
- 
+
+def adjust_unfinalized_bg(bg):
+    df = bg
+
+    def fill_in_temp_billed(row):
+        system = row['Third Party System']
+        third = row['Third Party Impressions']
+        billed = row['Billed Units']
+        booked = row['Booked Impressions']
+
+        if system == 'DFP':
+            return billed
+        if (third is None) or (third == ''):
+            return int(booked * 0.5)
+        return billed
+
+    df['Billed Units'] = df.apply(lambda row: fill_in_temp_billed(row), axis=1)
+    
+    return df
 
 ##############################################################
 # Ask.com TP
@@ -1126,6 +1144,7 @@ def make_site_report_as_excel(year, mo, prefix4output):
         site_goals = pickle.load(f)
 
     bg = get_bg(year, mo)
+    bg = adjust_unfinalized_bg(bg)
 
     ##############################################################
     # Prep

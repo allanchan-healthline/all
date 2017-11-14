@@ -1,16 +1,16 @@
 .*
 !/.gitignore
-!/.credentials
 
 Anaconda3-4.4.0-Linux-x86_64.sh
 
-adbook/adbook_2017_07/
-adbook/adbook_2017_08/
-adbook/last_run_*
+.credentials/*.json
+
+adbook/
 
 always_up2date/das.csv
 always_up2date/monthly_setup_*_last_checked
 always_up2date/__pycache__
+#always_up2date/uv_trackers/
 
 daily_runs/DAS\ Agg\ Backup/
 daily_runs/DCM Reports/
@@ -18,14 +18,17 @@ daily_runs/DCM Reports/
 logs/
 
 manual_runs/das.csv
+manual_runs/generated/
 
 monthly_runs/for_ask_tp_*.xlsx
 monthly_runs/for_billing_grid_*.csv
+monthly_runs/DCM\ Reports/
 
 often_runs/last_run_*
 
 pickles/
 
+python_path/dfareporting.dat
 python_path/__pycache__
 
 test/

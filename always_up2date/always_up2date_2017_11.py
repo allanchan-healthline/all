@@ -4,7 +4,6 @@ from monthly_setup_2017_11 import *
 from NEW_helpers import *
 from dataflow_class import *
 
-import sys
 import os
 import shutil
 

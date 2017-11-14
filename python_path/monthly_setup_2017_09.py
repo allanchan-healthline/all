@@ -4,7 +4,7 @@ MO_YEAR = (9, 2017)
 MONTHLY_SHEET_NAME = {'pas': 'Sep', 'cpuv goals': 'Sept'}
 
 UV_TRACKER_PATH = {'Drugs.com': '/home/kumiko/always_up2date/uv_trackers/Drugs com_Microsite_UV_Tracker - September 2017 V2.xlsx',
-                   'Livestrong': '/home/kumiko/always_up2date/uv_trackers/Livestrong_Microsite_UV_Tracker -September 2017 V2.xlsx',
+                   'Livestrong': '/home/kumiko/always_up2date/uv_trackers/Livestrong_Microsite_UV_Tracker - September 2017 V2.xlsx',
                    'EmpowHer': '/home/kumiko/always_up2date/uv_trackers/EmpowHER Microsite_UV_Tracker - September 2017.xlsx',
                    'HL': '/home/kumiko/always_up2date/uv_trackers/September 2017 CPUV.xlsx',
                    'MNT': '/home/kumiko/always_up2date/uv_trackers/September 2017 CPUV.xlsx'}
@@ -20,19 +20,11 @@ LS_CORRECT_RATE_DICT = {'Duopa': 1.00,
                         'Trintellix': 1.00,
                         'Trulance': 1.00}
 
-UV_TRACKER_RENAME_DICT = {'Drugs.com': {'Aubagio- switcher': 'Aubagio Switcher',
-                                        'Cosentyx AS': 'Cosentyx',
-                                        'Esbiret (unbranded)': 'Esbriet unbranded',
-                                        'Ocrevus (Branded)': 'Ocrevus', 
-                                        'Synvisc - (Brand)': 'Synvisc Brand',
-                                        'Tecfidera-reimagine': 'Tecfidera-Reimagine',
-                                        'Toujeo BP': 'Toujeo'},
+UV_TRACKER_RENAME_DICT = {'Drugs.com': {},
 
-                          'Livestrong': {'Esbriet-branded': 'Esbriet branded',
-                                         'Tecfidera- Brand': 'Tecfidera-Brand'},
+                          'Livestrong': {},
 
-                          'EmpowHer': {'Humira PSA': 'Humira PsA',
-                                       'Humira Pso': 'Humira PsO'},
+                          'EmpowHer': {},
 
                           'Medical News Today': {'Humira AS MNT': 'Humira AS',
                                                  'Humira CD MNT': 'Humira CD',
