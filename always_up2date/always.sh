@@ -20,7 +20,7 @@ cd $DIR
 CURRENT_MONTH=`date "+%Y_%m"`
 PREVIOUS_MONTH=`date -d "- 1 month" "+%Y_%m"`
 
-for YEAR_MO in "${PREVIOUS_MONTH} ${CURRENT_MONTH}" 
+for YEAR_MO in ${PREVIOUS_MONTH} ${CURRENT_MONTH} 
 do
     echo "$(date '+%Y-%m-%d-%H-%M-%S') For loop YEAR_MO=${YEAR_MO} Start" >> $LOG_FILE_NAME
     RUNNING="running_$YEAR_MO"
