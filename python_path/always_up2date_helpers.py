@@ -450,11 +450,13 @@ def make_all1(cpm, cpuv, temp_fix_das4flat_fee):
 
     return all1
 
-def get_site_goals(mo_year, pas_sheet, cpuv_goals_sheet, ls_correct_rate_dict, temp_fix_das4flat_fee):
+def get_site_goals(mo_year, pas_sheet, cpuv_goals_sheet, ls_correct_rate_dict, 
+                   drugs_correct_rate_list, temp_fix_das4flat_fee):
     """Return a dataframe of goals at site level, both CPM and CPUV combined.
     Also include MTD discrepancy (from PAS) and Site Rate (what we pay to site).
 
-    ls_correct_rate_dict and temp_fix_das4flat_fee are from python_path/monthly_setup_yyyy_mm.py
+    ls_correct_rate_dict, drugs_correct_rate_list, and temp_fix_das4flat_fee
+    are from python_path/monthly_setup_yyyy_mm.py
     """
 
     das_month = str(mo_year[0]) + '/' + str(mo_year[1])
@@ -561,6 +563,14 @@ def get_site_goals(mo_year, pas_sheet, cpuv_goals_sheet, ls_correct_rate_dict, t
     for tab_name in ls_correct_rate_dict:
         rate = ls_correct_rate_dict[tab_name]
         goals.loc[(goals['Site'] == 'Livestrong') & (goals['Report Tab Name'] == tab_name),
+                  'Non-standard Site Rate'] = rate
+
+    ## Drugs not 60% CPUV Microsite or CPM
+    for bbr, brand, ld, rate in drugs_correct_rate_list:
+        goals.loc[(goals['Site'] == 'Drugs.com') &
+                  (goals['BBR'] == bbr) &
+                  (goals['Brand'] == brand) &
+                  (goals['DAS Line Item Name'] == ld),
                   'Non-standard Site Rate'] = rate
 
     ## Drugs CPUV CC 30 cents

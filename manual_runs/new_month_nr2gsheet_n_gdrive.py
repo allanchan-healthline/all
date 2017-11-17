@@ -16,7 +16,8 @@ mo, year = MO_YEAR
 pas_sheet = MONTHLY_SHEET_NAME['pas']
 cpuv_goals_sheet = MONTHLY_SHEET_NAME['cpuv goals']
 
-site_goals = get_site_goals(MO_YEAR, pas_sheet, cpuv_goals_sheet, LS_CORRECT_RATE_DICT, TEMP_FIX_DAS4FLAT_FEE)
+site_goals = get_site_goals(MO_YEAR, pas_sheet, cpuv_goals_sheet, LS_CORRECT_RATE_DICT,
+                            DRUGS_CORRECT_RATE_LIST, TEMP_FIX_DAS4FLAT_FEE)
 
 ############################################################################
 # Dummy Daily Site Report

@@ -24,6 +24,7 @@ class DataFlow():
     MNT_UV_TRACKER_TABS = None
     UV_TRACKER_RENAME_DICT = None
     LS_CORRECT_RATE_DICT = None
+    DRUGS_CORRECT_RATE_LIST = None
     TEMP_FIX_DAS4FLAT_FEE = None
 
     def __init__(self):
@@ -383,6 +384,7 @@ class SiteGoals(DataFlow):
         return get_site_goals(self.mo_year, DataFlow.MONTHLY_SHEET_NAME['pas'],
                               DataFlow.MONTHLY_SHEET_NAME['cpuv goals'],
                               DataFlow.LS_CORRECT_RATE_DICT,
+                              DataFlow.DRUGS_CORRECT_RATE_LIST,
                               DataFlow.TEMP_FIX_DAS4FLAT_FEE)
 
 #############################################

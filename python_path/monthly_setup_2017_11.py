@@ -19,6 +19,8 @@ LS_CORRECT_RATE_DICT = {'Duopa': 1.00,
                         'Trintellix': 1.00,
                         'Trulance': 1.00}
 
+DRUGS_CORRECT_RATE_LIST = [('17-319', 'Toujeo', 'HL D LS m.HL m.D Sponsorship of T2D Microsite', 1.00)]
+
 UV_TRACKER_RENAME_DICT = {'Drugs.com': {},
 
                           'Livestrong': {},
