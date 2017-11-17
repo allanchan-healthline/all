@@ -9,7 +9,7 @@ UV_TRACKER_GSHEET = {'Drugs.com': '1gJ0HtjQ4GKVEluwK9ZkCrIoUgQ7O8k3Uy61-qW7kdTM'
                      'MNT': '1nmQxUMXVW-q_WhqoDI8Sl-bNfGpVFJjbE0w9EN9Ui0Y'}
 
 MNT_UV_TRACKER_TABS = ['Humira AS MNT', 'Humira CD MNT', 'Humira PSA MNT', 'Humira PSO MNT',
-                       'Humira RA MNT', 'Humira UC MNT']
+                       'Humira RA MNT', 'Livalo MNT']
 
 LS_CORRECT_RATE_DICT = {'Duopa': 1.00,
                         'Dupixent': 1.00,
@@ -30,29 +30,31 @@ UV_TRACKER_RENAME_DICT = {'Drugs.com': {},
                                                  'Humira PSA MNT': 'Humira PsA',
                                                  'Humira PSO MNT': 'Humira PsO',
                                                  'Humira RA MNT': 'Humira R.A.',
-                                                 'Humira UC MNT': 'Humira UC'}}
+                                                 'Livalo MNT': 'Livalo'}}
 
 def TEMP_FIX_DAS4FLAT_FEE(das):
     das = das.copy()
-    das.loc[das['Brand'] == 'Toujeo', ('Price Calculation Type', 'Base Rate')] = ('CPUV', 0.0)
+    das.loc[(das['Brand'] == 'Ruconest') & (das['Line Description'] == 'D GRx m.D m.GRx Competitive Conquesting (Fizayr, Cinryze, Berinert, Kalbitor, Haegarda, Ruconest) [PLACEHOLDER]'), 'Base Rate'] = 4.00
     return das
 
 PARTNER_CAPPING_SP_CASE = [
+    ('Drugs.com', '17-318', 'SHP465 (new adult ADHD med)', 'HL D LS m.HL m.D m.LS Competitive Conquesting [Adderall and AdderallXR]', 125000),
+    ('GoodRx', '17-318', 'SHP465 (new adult ADHD med)', 'HL D LS m.HL m.D m.LS Competitive Conquesting [Adderall and AdderallXR]', 60000),
     ('Drugs.com', '17-098', 'Ocrevus', 'D GoodRx m.D Competitive Conquesting (Non-exclusive on Drugs; Exclusive on GoodRx; Tecfidera, Tysabri, Gilenya, Zinbryta, & Aubagio)', 1900),
     ('GoodRx', '17-098', 'Ocrevus', 'D GoodRx m.D Competitive Conquesting (Non-exclusive on Drugs; Exclusive on GoodRx; Tecfidera, Tysabri, Gilenya, Zinbryta, & Aubagio)', 900),
     ('Drugs.com', '17-031', 'Cialis', 'D m.D Competitive Conquesting (Cialis, non-exclusive)', 26000),
     ('Drugs.com', '17-006', 'Kisqali', 'HL D GoodRx m.HL m.D Competitive Conquesting', 5757),
     ('GoodRx', '17-006', 'Kisqali', 'HL D GoodRx m.HL m.D Competitive Conquesting', 3733),
-    ('Drugs.com', '17-147', 'Trintellix', 'D GoodRx m.D Competitive Conquesting (Non-exclusive, See list)', 5250),
+    ('Drugs.com', '17-266', 'Ruconest', 'D GRx m.D m.GRx Competitive Conquesting (Fizayr, Cinryze, Berinert, Kalbitor, Haegarda, Ruconest) [PLACEHOLDER]', 500),
+    ('GoodRx', '17-266', 'Ruconest', 'D GRx m.D m.GRx Competitive Conquesting (Fizayr, Cinryze, Berinert, Kalbitor, Haegarda, Ruconest) [PLACEHOLDER]', 500),
+    ('Drugs.com', '17-147', 'Trintellix', 'D GoodRx m.D Competitive Conquesting (Non-exclusive, See list)', 4768),
     ('GoodRx', '17-147', 'Trintellix', 'D GoodRx m.D Competitive Conquesting (Non-exclusive, See list)', 2000), 
-    ('Drugs.com', '17-102', 'Xiafle', 'D GoodRx m.D Competitive Conquesting (Xiaflex)', 640), 
-    ('GoodRx', '17-102', 'Xiafle', 'D GoodRx m.D Competitive Conquesting (Xiaflex)', 100)]
+    ]
 
 def ADD_SPECIAL_CASE(df):
     df.loc[(df['Brand'] == 'Cialis') &
            (df['DAS Line Item Name'] == 'D m.D Competitive Conquesting (Cialis, non-exclusive)'),
            'Special Case'] = 'Pay Drugs up to 26k UVs & get paid up to 22k UVs (Undersold)'
-    df.loc[df['Brand'] == 'Toujeo', 'Special Case'] = 'Flat-fee'
     df.loc[(df['Brand'] == 'Harvoni') &
            (df['DAS Line Item Name'].str.contains('HL D LS m.HL m.D Sponsorship of Hep C Microsite')),
            'Special Case'] = 'CPM Microsite'

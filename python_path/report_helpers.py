@@ -191,7 +191,7 @@ def get_daily_site_report(all1, site_goals, partner_capping_sp_case):
                  'Price Calculation Type': 'DAS Price Calculation Type'})
 
     # Special Case Toujeo for Drugs CC
-    das_thismonth.loc[das_thismonth['Brand'] == 'Toujeo', 'DAS Price Calculation Type'] = 'Flat-fee'
+    #das_thismonth.loc[das_thismonth['Brand'] == 'Toujeo', 'DAS Price Calculation Type'] = 'Flat-fee'
 
     ###################################################################
     # 1. Overall: Delivery & Estimated 3rd party imps
