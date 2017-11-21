@@ -15,7 +15,6 @@ LS_CORRECT_RATE_DICT = {'Duopa': 1.00,
                         'Dupixent': 1.00,
                         'Humira CD': 1.00,
                         'Synvisc Brand': 1.50, 
-                        'Toujeo': 0.90,
                         'Trintellix': 1.00,
                         'Trulance': 1.00}
 

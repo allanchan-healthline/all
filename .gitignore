@@ -1,11 +1,11 @@
 .*
-!/.gitignore
+!.gitignore
 
 Anaconda3-4.4.0-Linux-x86_64.sh
 
 *.pyc
-.credentials/
 
+always_up2date/running_*
 always_up2date/das.csv
 always_up2date/monthly_setup_*_last_checked
 always_up2date/__pycache__
@@ -13,6 +13,7 @@ always_up2date/__pycache__
 daily_runs/DAS\ Agg\ Backup/
 daily_runs/DCM Reports/
 
+#adbook/
 logs/
 
 manual_runs/das.csv
