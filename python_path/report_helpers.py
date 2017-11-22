@@ -1512,9 +1512,21 @@ def get_check_mapping_dict(all1, site_goals):
 
     no_match = bbr2cm(no_match, '(DAS)BBR #', das)
 
-    col = ['Campaign Manager', '(DAS)BBR #', 'Order', 'Line item', 'Creative', 'DAS Line Item Name', 'Site']
+    groupby_col = ['Campaign Manager', '(DAS)BBR #', 'Order', 'Line item', 'DFP Creative ID', 'Creative', 'DAS Line Item Name', 'Site']
+    value_col = ['Impressions/UVs']
+    rename_dict = {'Impressions/UVs': 'Impressions'}
     sortby = ['Campaign Manager', 'Order', 'Line item', 'Creative', 'DAS Line Item Name', 'Site']
-    no_match = no_match[col].drop_duplicates().sort_values(sortby)
+
+    fillna_col = ['Campaign Manager', '(DAS)BBR #', 'Site']
+    fillna_str = '_TEMP_NONE_'
+    for col in fillna_col:
+        no_match[col] = no_match[col].fillna(fillna_str)  # For grouping
+
+    no_match = no_match[groupby_col + value_col].groupby(groupby_col).sum().reset_index(drop=False)
+    no_match = no_match.rename(columns=rename_dict).sort_values(sortby)
+
+    for col in fillna_col:
+        no_match[col] = no_match[col].str.replace(fillna_str, '')
 
     check_mapping_dict['CPM no match in Salesforce'] = no_match
 

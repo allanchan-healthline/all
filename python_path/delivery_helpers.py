@@ -94,6 +94,7 @@ def run_dfp_mtd_all_query(last_delivery_date):
             'Dimension.ADVERTISER_NAME',
             'Dimension.ORDER_NAME',
             'Dimension.LINE_ITEM_NAME',
+            'Dimension.CREATIVE_ID',
             'Dimension.CREATIVE_NAME',
             'Dimension.CREATIVE_SIZE',
             'Dimension.AD_UNIT_NAME',
@@ -107,6 +108,7 @@ def run_dfp_mtd_all_query(last_delivery_date):
                        'Dimension.ADVERTISER_NAME': 'Advertiser',
                        'Dimension.ORDER_NAME': 'Order',
                        'Dimension.LINE_ITEM_NAME': 'Line item',
+                       'Dimension.CREATIVE_ID': 'DFP Creative ID',
                        'Dimension.CREATIVE_NAME': 'Creative',
                        'Dimension.CREATIVE_SIZE': 'Creative size',
                        'Dimension.AD_UNIT_NAME': 'Ad unit',
@@ -172,12 +174,14 @@ def get_dfp_today_delivery():
 
     cols = ['Dimension.ORDER_NAME',
             'Dimension.LINE_ITEM_NAME',
+            'Dimension.CREATIVE_ID', 
             'Dimension.CREATIVE_NAME',
             'CF[6995]_Value',
             'Column.AD_SERVER_IMPRESSIONS']
 
     col_rename_dict = {'Dimension.ORDER_NAME': 'Order',
                        'Dimension.LINE_ITEM_NAME': 'Line item',
+                       'Dimension.CREATIVE_ID': 'DFP Creative ID',
                        'Dimension.CREATIVE_NAME': 'Creative',
                        'CF[6995]_Value': 'DAS Line Item Name',
                        'Column.AD_SERVER_IMPRESSIONS': 'Ad Server Impressions'}
