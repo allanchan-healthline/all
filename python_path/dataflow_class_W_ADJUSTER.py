@@ -176,7 +176,7 @@ class CPUV(DataFlow):
         for dependency in self.dependency_list:
             if dependency.name != 'cpuv_goals':
                 df = dependency.load_pickle()
-                df_list.append(df))
+                df_list.append(df)
         return pd.concat(df_list)
 
 #############################################
