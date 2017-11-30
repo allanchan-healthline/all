@@ -13,6 +13,7 @@ export PYTHONPATH="/home/kumiko/python_path"
 DIR="/home/kumiko/hourly_runs"
 
 python $DIR/today_dfp_report2gdrive.py
+python $DIR/last_hour_dfp_report2gdrive.py
 
 # Logging
 LOG_END_TIME=$(date '+%Y-%m-%d-%H-%M-%S')

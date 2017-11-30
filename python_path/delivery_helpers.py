@@ -127,6 +127,72 @@ def run_dfp_mtd_all_query(last_delivery_date):
 
     return dfp_mtd_all
 
+def get_dfp_last_hour_delivery():
+
+    today_date = datetime.now(tz=pytz.utc).astimezone(timezone('US/Eastern'))
+    last_hr = today_date.hour - 1
+    if last_hr < 0:
+        return 
+
+    output_file_name = 'temp_dfp_last_hour_delivery.csv'
+
+    ########################################################
+    # Get Order Name, Line Item Name
+    ########################################################
+
+    dfp_client = dfp.DfpClient.LoadFromStorage(os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + "/googleads.yaml")
+    filter_statement = {'query': "WHERE ORDER_NAME LIKE '%BBR%'"}
+
+    report_job = {
+        'reportQuery': {
+            'dimensions': ['ORDER_NAME',
+                           'LINE_ITEM_NAME',
+                           'HOUR'],
+            'statement': filter_statement,
+            'columns': ['AD_SERVER_IMPRESSIONS'],
+            'dateRangeType': 'CUSTOM_DATE',
+            'startDate': {'year': today_date.year,
+                          'month': today_date.month,
+                          'day': today_date.day},
+            'endDate': {'year': today_date.year,
+                        'month': today_date.month,
+                        'day': today_date.day}
+        }
+    }
+
+    report_downloader = dfp_client.GetDataDownloader(version='v201702')
+    try:
+        generated_at = datetime.now(tz=pytz.utc).astimezone(timezone('US/Eastern'))
+        report_job_id = report_downloader.WaitForReport(report_job)
+    except errors.DfpReportError as e:
+        print('Failed to generate report. Error was: %s' % e)
+
+    with open(output_file_name, 'wb') as report_file:
+        report_downloader.DownloadReportToFile(report_job_id, 'CSV_DUMP', report_file, use_gzip_compression=False)
+
+    ########################################################
+    # Clean up
+    ########################################################
+
+    cols = ['Dimension.ORDER_NAME',
+            'Dimension.LINE_ITEM_NAME',
+            'Dimension.HOUR',
+            'Column.AD_SERVER_IMPRESSIONS']
+
+    col_rename_dict = {'Dimension.ORDER_NAME': 'Order',
+                       'Dimension.LINE_ITEM_NAME': 'Line item',
+                       'Dimension.HOUR': 'Hour',
+                       'Column.AD_SERVER_IMPRESSIONS': 'Ad Server Impressions'}
+
+    df = pd.read_csv(output_file_name, encoding='utf-8')
+    df = df[cols].rename(columns=col_rename_dict)
+
+    df = df[df['Hour'] == last_hr]  # Only pick up last hour
+    df = df.sort_values(by='Ad Server Impressions', ascending=False)  # Sort by # of imps, higher at top
+
+    os.remove(output_file_name)
+    return (generated_at, df)
+
 def get_dfp_today_delivery():
 
     today_date = datetime.now(tz=pytz.utc).astimezone(timezone('US/Eastern')).date()
@@ -517,6 +583,8 @@ def dcm_reporting(start_date, end_date):
         print('Round ' + str(j))
         ##4.1 Get a report status
         for i, row in profiles_df.iterrows():
+            time.sleep(1)
+
             report_downloaded = row['report_downloaded']
             profile_id = row['profileId']
             report_id = row['report_id']
