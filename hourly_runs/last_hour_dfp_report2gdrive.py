@@ -5,7 +5,7 @@ import os
 
 # Create csv
 generated_at, df = get_dfp_last_hour_delivery()
-csv_namt = 'LastHour_DFP_Report_AsOf_NY_' + generated_at.strftime('%m-%d-%Y_%Hhr%Mmin') + '.csv'
+csv_name = 'LastHour_DFP_Report_AsOf_NY_' + generated_at.strftime('%m-%d-%Y_%Hhr%Mmin') + '.csv'
 df.to_csv(csv_name, index=False, encoding='utf-8')
 
 # Upload csv to Google Drive
