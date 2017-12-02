@@ -1,5 +1,6 @@
 .*
 !.gitignore
+!.credentials
 
 Anaconda3-4.4.0-Linux-x86_64.sh
 
@@ -13,7 +14,7 @@ always_up2date/__pycache__
 daily_runs/DAS\ Agg\ Backup/
 daily_runs/DCM Reports/
 
-#adbook/
+adbook/
 logs/
 
 manual_runs/das.csv
