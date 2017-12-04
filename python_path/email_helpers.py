@@ -5,8 +5,8 @@ import smtplib
 def email2adops_over_threshold_last_hour(df, csv_file, threshold=50000):
 
     ##########################################################################
-    e_address = 'adops@healthline.com'
-    password = '???'
+    e_address = 'adopssf@healthline.com'
+    password = 'healthline15'
     ##########################################################################
 
     df2email = df[df['Ad Server Impressions'] > threshold]
@@ -31,7 +31,7 @@ def email2adops_over_threshold_last_hour(df, csv_file, threshold=50000):
     msg = MIMEMultipart()
     msg['From'] = e_address
     msg['To'] = e_address
-    msg['Subject'] = 'Check DFP Line Items: Over 50k Last Hour'
+    msg['Subject'] = 'Check DFP Line Items: Over {}k Last Hour'.format(threshold/1000)
     msg.attach(MIMEText(text, 'plain'))
     msg.attach(attachment)
 

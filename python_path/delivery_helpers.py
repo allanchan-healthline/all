@@ -188,7 +188,7 @@ def get_dfp_last_hour_delivery():
     df = df[cols].rename(columns=col_rename_dict)
 
     df = df[df['Hour'] == last_hr]  # Only pick up last hour
-    df = df.sort_values(by='Ad Server Impressions', ascending=False)  # Sort by # of imps, higher at top
+    df = df.sort_values(by='Ad Server Impressions', ascending=False)  # Sort by # of imp, higher at top
 
     os.remove(output_file_name)
     return (generated_at, df)
