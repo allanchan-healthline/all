@@ -11,7 +11,7 @@ def email2adops_over_threshold_last_hour(df, csv_file, threshold=50000):
 
     df2email = df[df['Ad Server Impressions'] > threshold]
     if len(df2email) == 0:  # Done if no line is over threshold
-        exit()
+        return
 
     # Prep email body
     text = ''
