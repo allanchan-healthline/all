@@ -379,8 +379,11 @@ def get_microsite_uvs(site, mo_year, gsheet_file_id, cpuv_goals_sheet, mnt_uv_tr
     month_start_date = date(year, mo, 1)
     month_end_date = start_end_month(month_start_date)[1]
 
-    uv_df['Date'] = pd.to_datetime(uv_df['Date'])
-    uv_df['Date'] = [(d.date()) for d in uv_df['Date']]
+    def temp_convert_str_date(str_date):  # Factor out of here later
+        mo_, day_, year_ = str_date.split('/')
+        return date(int(year_), int(mo_), int(day_))
+
+    uv_df['Date'] = [temp_convert_str_date(d) for d in uv_df['Date']]
     uv_df = uv_df[(uv_df['Date'] >= month_start_date) & (uv_df['Date'] <= month_end_date)]
 
     # UVs are in str when pulled from Google Sheet. Make them numeric. Enter zero for non-numeric.
