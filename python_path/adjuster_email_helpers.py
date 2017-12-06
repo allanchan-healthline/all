@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 import pytz
 
 import zipfile
+from dateutil.parser import parse
 
 __author__ = 'achan@healthline.com'
 
@@ -55,17 +56,24 @@ def matches_mo_year(msg, mo_year):
                 is_csv = False  # zip file
 
             if is_csv:
-                with open('temp_adjuster_report.csv', 'wb') as f:
-                    f.write(part.get_payload(decode=True))
+                try: 
+                    with open('temp_adjuster_report.csv', 'wb') as f:
+                        f.write(part.get_payload(decode=True))
+                except Exception as e:
+                    print('calling mathches_mo_year with exception {}'.format(e))
             else:
                 with open('temp_adjuster_report.zip', 'wb') as f:
                     f.write(part.get_payload(decode=True))
                 with zipfile.ZipFile('temp_adjuster_report.zip', 'r') as zip_ref:
-                    zip_ref.extractall()
-                    csv_filename = zip_ref.namelist()[0]
-                    if os.path.isfile('temp_adjuster_report.csv'):
-                        os.remove('temp_adjuster_report.csv')
-                    os.rename(csv_filename, 'temp_adjuster_report.csv')
+                    try:
+                        zip_ref.extractall()
+                    except Exception as e:
+                        print('calling matches_mo_year with exception {}'.format(e))
+                    else:
+                        csv_filename = zip_ref.namelist()[0]
+                        if os.path.isfile('temp_adjuster_report.csv'):
+                            os.remove('temp_adjuster_report.csv')
+                        os.rename(csv_filename, 'temp_adjuster_report.csv')
                 os.remove('temp_adjuster_report.zip')
 
     # Get report start date
@@ -73,7 +81,7 @@ def matches_mo_year(msg, mo_year):
         reader = csv.reader(f)
         for line in reader:
             if line[0] == 'Report Start:':
-                report_start_date = line[1]
+                report_start_date = parse(line[1]).strftime('%m/%d/%Y')
                 break
     os.remove('temp_adjuster_report.csv')
 

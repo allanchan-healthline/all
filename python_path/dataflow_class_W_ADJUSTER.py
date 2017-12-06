@@ -92,13 +92,20 @@ class MicrositeUVs(DataFlow):
         self.dependency_list = []
 
     def get_raw_df(self):
-        return get_microsite_uvs(self.site, self.mo_year, DataFlow.UV_TRACKER_GSHEET[self.site],
-                                 DataFlow.MONTHLY_SHEET_NAME['cpuv goals'],
-                                 DataFlow.MNT_UV_TRACKER_TABS)
+        try:
+            raw_df = get_microsite_uvs(self.site, self.mo_year, DataFlow.UV_TRACKER_GSHEET[self.site], DataFlow.MONTHLY_SHEET_NAME['cpuv goals'], DataFlow.MNT_UV_TRACKER_TABS)
+        except Exception as e:
+            print('calling get_raw_df with exception: {}'.format(e))
+        else:
+            return raw_df
 
     def get_labeled_df(self):
-        return label_microsite_uvs(self.get_raw_df(), self.mo_year, DataFlow.MONTHLY_SHEET_NAME['cpuv goals'],
-                                   DataFlow.UV_TRACKER_RENAME_DICT)
+        try:
+            labeled_df = label_microsite_uvs(self.get_raw_df(), self.mo_year, DataFlow.MONTHLY_SHEET_NAME['cpuv goals'], DataFlow.UV_TRACKER_RENAME_DICT)
+        except Exception as e:
+            print('calling get_labeled_df with exception: {}'.format(e))
+        else:
+            return labeled_df
 
     def perform_op(self):
         return self.get_labeled_df()
@@ -122,10 +129,20 @@ class CC_UVs(DataFlow):
         self.dependency_list = []
 
     def get_raw_df(self):
-        return get_cc_uvs(self.site, self.mo_year, DataFlow.MONTHLY_SHEET_NAME['cpuv goals'])
+        try:
+            raw_df = get_cc_uvs(self.site, self.mo_year, DataFlow.MONTHLY_SHEET_NAME['cpuv goals'])
+        except Exception as e:
+            print('calling get_raw_df with exception {}'.format(e))
+        else:
+            return raw_df
 
     def get_labeled_df(self):
-        return label_cc_uvs(self.get_raw_df(), self.mo_year, DataFlow.MONTHLY_SHEET_NAME['cpuv goals'])
+        try:
+            labeled_df = label_cc_uvs(self.get_raw_df(), self.mo_year, DataFlow.MONTHLY_SHEET_NAME['cpuv goals'])
+        except Exception as e:
+            print('calling get_labeled_df with exception {}'.format(e))
+        else:
+            return labeled_df
 
     def perform_op(self):
         return self.get_labeled_df()
@@ -405,6 +422,7 @@ class AdjusterDFP_Path(DataFlow):
             sent_since_local_datetime = self.get_check_pickle()
         else:
             sent_since_local_datetime = datetime(self.mo_year[1], self.mo_year[0], 1)
+
         csv_filename, sent_local_datetime = get_newest_csv_filename_n_sent_local_datetime(sent_since_local_datetime, 'Your report: CDR Month To Date', self.mo_year)
 
         # Move csv from local directory to pickle directory
