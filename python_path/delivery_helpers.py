@@ -127,6 +127,72 @@ def run_dfp_mtd_all_query(last_delivery_date):
 
     return dfp_mtd_all
 
+def get_dfp_last_hour_delivery():
+
+    today_date = datetime.now(tz=pytz.utc).astimezone(timezone('US/Eastern'))
+    last_hr = today_date.hour - 1
+    if last_hr < 0:
+        return 
+
+    output_file_name = 'temp_dfp_last_hour_delivery.csv'
+
+    ########################################################
+    # Get Order Name, Line Item Name
+    ########################################################
+
+    dfp_client = dfp.DfpClient.LoadFromStorage(os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + "/googleads.yaml")
+    filter_statement = {'query': "WHERE ORDER_NAME LIKE '%BBR%'"}
+
+    report_job = {
+        'reportQuery': {
+            'dimensions': ['ORDER_NAME',
+                           'LINE_ITEM_NAME',
+                           'HOUR'],
+            'statement': filter_statement,
+            'columns': ['AD_SERVER_IMPRESSIONS'],
+            'dateRangeType': 'CUSTOM_DATE',
+            'startDate': {'year': today_date.year,
+                          'month': today_date.month,
+                          'day': today_date.day},
+            'endDate': {'year': today_date.year,
+                        'month': today_date.month,
+                        'day': today_date.day}
+        }
+    }
+
+    report_downloader = dfp_client.GetDataDownloader(version='v201702')
+    try:
+        generated_at = datetime.now(tz=pytz.utc).astimezone(timezone('US/Eastern'))
+        report_job_id = report_downloader.WaitForReport(report_job)
+    except errors.DfpReportError as e:
+        print('Failed to generate report. Error was: %s' % e)
+
+    with open(output_file_name, 'wb') as report_file:
+        report_downloader.DownloadReportToFile(report_job_id, 'CSV_DUMP', report_file, use_gzip_compression=False)
+
+    ########################################################
+    # Clean up
+    ########################################################
+
+    cols = ['Dimension.ORDER_NAME',
+            'Dimension.LINE_ITEM_NAME',
+            'Dimension.HOUR',
+            'Column.AD_SERVER_IMPRESSIONS']
+
+    col_rename_dict = {'Dimension.ORDER_NAME': 'Order',
+                       'Dimension.LINE_ITEM_NAME': 'Line item',
+                       'Dimension.HOUR': 'Hour',
+                       'Column.AD_SERVER_IMPRESSIONS': 'Ad Server Impressions'}
+
+    df = pd.read_csv(output_file_name, encoding='utf-8')
+    df = df[cols].rename(columns=col_rename_dict)
+
+    df = df[df['Hour'] == last_hr]  # Only pick up last hour
+    df = df.sort_values(by='Ad Server Impressions', ascending=False)  # Sort by # of imp, higher at top
+
+    os.remove(output_file_name)
+    return (generated_at, df)
+
 def get_dfp_today_delivery():
 
     today_date = datetime.now(tz=pytz.utc).astimezone(timezone('US/Eastern')).date()
@@ -262,7 +328,6 @@ def get_microsite_uvs(site, mo_year, gsheet_file_id, cpuv_goals_sheet, mnt_uv_tr
     service = get_gsheet_service()
 
     for sheet in sheets:
-
         next_sheet = False
 
         try:
@@ -291,7 +356,6 @@ def get_microsite_uvs(site, mo_year, gsheet_file_id, cpuv_goals_sheet, mnt_uv_tr
         # Extract date and uvs until the 'Total' row
         r += 1
         while ((values[r][date_col_num] != 'Total') & (values[r][date_col_num] != 'Total MTD')):
-
             if len(values[r]) > date_col_num+1:
                 if values[r][date_col_num+1] == 'Total':
                     break
@@ -306,6 +370,7 @@ def get_microsite_uvs(site, mo_year, gsheet_file_id, cpuv_goals_sheet, mnt_uv_tr
         time.sleep(1)
 
     uv_df = pd.DataFrame(uv_list, columns=['Site', 'Original Report Tab Name', 'Date', 'UVs'])
+    uv_df = uv_df[uv_df['Date'] != '']
 
     # Pick only this month's uvs
     mo = mo_year[0]
@@ -313,8 +378,7 @@ def get_microsite_uvs(site, mo_year, gsheet_file_id, cpuv_goals_sheet, mnt_uv_tr
     month_start_date = date(year, mo, 1)
     month_end_date = start_end_month(month_start_date)[1]
 
-    uv_df['Date'] = pd.to_datetime(uv_df['Date'])
-    uv_df['Date'] = [(d.date()) for d in uv_df['Date']]
+    uv_df['Date'] = [datetime.strptime(d, '%m/%d/%Y').date() for d in uv_df['Date']]
     uv_df = uv_df[(uv_df['Date'] >= month_start_date) & (uv_df['Date'] <= month_end_date)]
 
     # UVs are in str when pulled from Google Sheet. Make them numeric. Enter zero for non-numeric.
@@ -517,6 +581,8 @@ def dcm_reporting(start_date, end_date):
         print('Round ' + str(j))
         ##4.1 Get a report status
         for i, row in profiles_df.iterrows():
+            time.sleep(1)
+
             report_downloaded = row['report_downloaded']
             profile_id = row['profileId']
             report_id = row['report_id']

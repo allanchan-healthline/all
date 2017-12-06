@@ -482,7 +482,7 @@ def gdrive_get_file_id_by_name(name, folder_id):
     return id
 
 def gdrive_get_most_recent_file_id(folder_id):
-    """Return the file id of a file with the most recent modified timestamp in a specified Google Drive folder."""
+    """Return the file id of a file with the most recent modified timestamp in a specified Google Drive folder. Exclude folders."""
 
     service = get_gdrive_service()
 
@@ -492,7 +492,8 @@ def gdrive_get_most_recent_file_id(folder_id):
     page_token = None
     while True:
         response = service.files().list(q="'" + folder_id + "' in parents" + " and " +
-                                          "trashed = false",
+                                          "trashed = false and " +
+                                          "mimeType != 'application/vnd.google-apps.folder'",
                                         spaces='drive',
                                         fields='nextPageToken, files(id, modifiedTime)',
                                         pageToken=page_token).execute()
@@ -510,18 +511,22 @@ def gdrive_get_most_recent_file_id(folder_id):
 
     return most_recent_file_id
 
-def gdrive_get_file_info_list(folder_id):
+def gdrive_get_file_info_list(folder_id, exclude_folder=True):
     """Return a list dictionaries, each of which contains information about a file in a specified Google Drive folder.
     Each dictionary consists of 'id' (file id), 'name' (file name), and 'last_modified' (last modified timestamp in UTC).
     """
 
     service = get_gdrive_service()
 
+    query = "'" + folder_id + "' in parents"
+    query += " and trashed = false"
+    if exclude_folder:
+        query += " and mimeType != 'application/vnd.google-apps.folder'"
+
     folder_content = []
     page_token = None
     while True:
-        response = service.files().list(q="'" + folder_id + "' in parents" + " and " +
-                                          "trashed = false",
+        response = service.files().list(q=query,
                                         spaces='drive',
                                         fields='nextPageToken, files(id, name, modifiedTime)',
                                         pageToken=page_token).execute()

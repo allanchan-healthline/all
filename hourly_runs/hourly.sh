@@ -11,8 +11,10 @@ export PATH="/usr/local/anaconda3/bin:$PATH"
 export PYTHONPATH="/home/kumiko/python_path"
 
 DIR="/home/kumiko/hourly_runs"
+cd $DIR
 
-python $DIR/today_dfp_report2gdrive.py
+python today_dfp_report2gdrive.py
+python last_hour_dfp_report2gdrive.py
 
 # Logging
 LOG_END_TIME=$(date '+%Y-%m-%d-%H-%M-%S')

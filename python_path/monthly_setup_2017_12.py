@@ -1,13 +1,13 @@
 
-MO_YEAR = (11, 2017)
+MO_YEAR = (12, 2017)
 
-MONTHLY_SHEET_NAME = {'pas': 'Nov', 'cpuv goals': 'Nov'}
+MONTHLY_SHEET_NAME = {'pas': 'Dec', 'cpuv goals': 'Dec'}
 
-UV_TRACKER_GSHEET = {'Drugs.com': '1gJ0HtjQ4GKVEluwK9ZkCrIoUgQ7O8k3Uy61-qW7kdTM',
-                     'Livestrong': '1N2C6GyQHf9VeS-S0hadznCUeHLVDILHOHxowumOBA4o',
-                     'EmpowHer': '1E6joonYUXVjcAUe9jCYwY-O7KyJJrex6Wm6vvNKbaAA',
-                     'HL': '1nmQxUMXVW-q_WhqoDI8Sl-bNfGpVFJjbE0w9EN9Ui0Y',
-                     'MNT': '1nmQxUMXVW-q_WhqoDI8Sl-bNfGpVFJjbE0w9EN9Ui0Y'}
+UV_TRACKER_GSHEET = {'Drugs.com': '1_yeH11gA7OeV8mYaFbIZxcv4AWMJk-dALaV-LWRq9PE',
+                     'Livestrong': '1WNtbbQSjWdL0ugCPg6t-y3i92a_nif0dsOjE1Az_Urk',
+                     'EmpowHer': '1JLBrzXhxaPi_Fe4mKXMdOOJxWihSbeVDl-3k1fwH7Cc',
+                     'HL': '1qvI1uWaA9EqKMzHkTErf-jF5vfKGqYAZhZxYaJcExhk',
+                     'MNT': '1qvI1uWaA9EqKMzHkTErf-jF5vfKGqYAZhZxYaJcExhk'}
 
 MNT_UV_TRACKER_TABS = ['Humira AS MNT', 'Humira CD MNT', 'Humira PSA MNT', 'Humira PSO MNT',
                        'Humira RA MNT', 'Livalo MNT']
