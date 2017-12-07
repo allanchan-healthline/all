@@ -39,7 +39,7 @@ def run_dfp_mtd_all_query(last_delivery_date):
     output_file_name = 'temp_dfp_mtd_all.csv'
 
     # Report query id
-    saved_query_id = '10033208648'   #this Fon's duplicated query 
+    saved_query_id = '10033208648'   #this Fon's duplicated query i.e. Orders include 'BBR' 
 
     # Initialize a client
     client = dfp.DfpClient.LoadFromStorage(os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + "/googleads.yaml")
@@ -1066,3 +1066,101 @@ def get_dcm_placement_ids(end_date):
     os.remove(output_file_name)
 
     return df
+
+def run_dfp_mtd_ask_tp_query(year, mo):
+    # Pulls all dfp traffic. It's temporary. Ask TP report will go away at the end of Dec.
+
+    start_date = date(year, mo, 1)
+    end_date = start_end_month(start_date)[1]
+    output_file_name = 'temp_dfp_mtd_ask_tp.csv'
+
+    # Report query id
+    saved_query_id = '10000261152'  #all traffic
+
+    # Initialize a client
+    client = dfp.DfpClient.LoadFromStorage(os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + "/googleads.yaml")
+
+    # Initialize appropriate service.
+    report_service = client.GetService('ReportService', version='v201705')
+
+    # Initialize a DataDownloader.
+    report_downloader = client.GetDataDownloader(version='v201705')
+
+    # Create statement object to filter for an order.
+    values = [{'key': 'id',
+               'value': {'xsi_type': 'NumberValue',
+                         'value': saved_query_id}}]
+    query = 'WHERE id = :id'
+    statement = dfp.FilterStatement(query, values, 1)
+
+    response = report_service.getSavedQueriesByStatement(statement.ToStatement())
+
+    if 'results' in response:
+        saved_query = response['results'][0]
+
+        if saved_query['isCompatibleWithApiVersion']:
+            report_job = {}
+
+            # Set report query and optionally modify it.
+            report_job['reportQuery'] = saved_query['reportQuery']
+
+            report_job['reportQuery']['startDate']['year'] = start_date.year
+            report_job['reportQuery']['startDate']['month'] = start_date.month
+            report_job['reportQuery']['startDate']['day'] = start_date.day
+
+            report_job['reportQuery']['endDate']['year'] = end_date.year
+            report_job['reportQuery']['endDate']['month'] = end_date.month
+            report_job['reportQuery']['endDate']['day'] = end_date.day
+
+            try:
+                # Run the report and wait for it to finish.
+                report_job_id = report_downloader.WaitForReport(report_job)
+            except errors.DfpReportError as e:
+                print('Failed to generate report. Error was: %s' % e)
+
+            # Download report data.
+            with open(output_file_name, 'wb') as report_file:
+                report_downloader.DownloadReportToFile(report_job_id, 'CSV_DUMP', report_file, use_gzip_compression=False)
+
+        else:
+            print('The query specified is not compatible with the API version.')
+
+    # Clean up
+    cols = ['Dimension.DATE',
+            'Dimension.ADVERTISER_NAME',
+            'Dimension.ORDER_NAME',
+            'Dimension.LINE_ITEM_NAME',
+            'Dimension.CREATIVE_ID',
+            'Dimension.CREATIVE_NAME',
+            'Dimension.CREATIVE_SIZE',
+            'Dimension.AD_UNIT_NAME',
+            'DimensionAttribute.LINE_ITEM_COST_PER_UNIT',
+            'CF[6995]_Value',
+            'CF[7115]_Value',
+            'Column.TOTAL_LINE_ITEM_LEVEL_IMPRESSIONS',
+            'Column.TOTAL_LINE_ITEM_LEVEL_CLICKS']
+
+    col_rename_dict = {'Dimension.DATE': 'Date',
+                       'Dimension.ADVERTISER_NAME': 'Advertiser',
+                       'Dimension.ORDER_NAME': 'Order',
+                       'Dimension.LINE_ITEM_NAME': 'Line item',
+                       'Dimension.CREATIVE_ID': 'DFP Creative ID',
+                       'Dimension.CREATIVE_NAME': 'Creative',
+                       'Dimension.CREATIVE_SIZE': 'Creative size',
+                       'Dimension.AD_UNIT_NAME': 'Ad unit',
+                       'DimensionAttribute.LINE_ITEM_COST_PER_UNIT': 'Rate ($)',
+                       'CF[6995]_Value': 'DAS Line Item Name',
+                       'CF[7115]_Value': '3rd Party Creative ID',
+                       'Column.TOTAL_LINE_ITEM_LEVEL_IMPRESSIONS': 'Total impressions',
+                       'Column.TOTAL_LINE_ITEM_LEVEL_CLICKS': 'Total clicks'}
+
+    dfp_mtd_ask_tp = pd.read_csv(output_file_name , encoding='utf-8')
+    dfp_mtd_ask_tp['DimensionAttribute.LINE_ITEM_COST_PER_UNIT'] = dfp_mtd_ask_tp['DimensionAttribute.LINE_ITEM_COST_PER_UNIT'] / 1000000.0
+    dfp_mtd_ask_tp = dfp_mtd_ask_tp[cols].rename(columns=col_rename_dict)
+    dfp_mtd_ask_tp['Date'] = [datetime.strptime(d, '%Y-%m-%d').date() for d in dfp_mtd_ask_tp['Date']]
+
+    os.remove(output_file_name)
+
+    return dfp_mtd_ask_tp
+
+

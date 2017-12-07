@@ -1,6 +1,7 @@
 from path2pickles import *
 from NEW_helpers import *
 from delivery_helpers import *
+from always_up2date_helpers import *
 from gsheet_gdrive_api import *
 
 import pickle
@@ -777,10 +778,13 @@ def make_ask_tp_as_excel(year, mo):
     ##############################################################
 
     # Labeled dfp report
-    DIR_PICKLES = PATH2PICKLES + '/' + PREFIX4ALWAYS_UP2DATE + str(year) + '_' + str(mo).zfill(2)
-    with open(DIR_PICKLES + '/' + 'all1.pickle', 'rb') as f:
-        all1 = pickle.load(f)
-    
+    row_dfp = run_dfp_mtd_ask_tp_query(year, mo)
+    labeled_dfp = label_dfp_mtd_all(row_dfp)
+
+    dummy_cpuv = pd.DataFrame(columns=['BBR', 'Base Rate', 'Campaign Name', 'Date', 'Line Description', 'Original Report Tab Name', 
+                                       'Report Tab Name', 'Site', 'UV entered', 'UVs'])
+    all1 = make_all1(labeled_dfp, dummy_cpuv, None)
+
     df = all1[pd.notnull(all1['Ad unit'])]  # Only include DFP data, no UV data
 
     # Extract Ask TP imps

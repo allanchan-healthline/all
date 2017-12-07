@@ -331,7 +331,8 @@ def make_all1(cpm, cpuv, temp_fix_das4flat_fee):
     year = last_delivery_date.year
     das_month = str(mo) + '/' + str(year)
     das = make_das(use_scheduled_units=False, export=False)
-    das = temp_fix_das4flat_fee(das)
+    if temp_fix_das4flat_fee is not None:
+        das = temp_fix_das4flat_fee(das)
     das_thismonth = das_filtered(das, das_month).rename(columns={'BBR': '(DAS)BBR #', 
                                                                  'Line Description': 'DAS Line Item Name'})
 
@@ -348,7 +349,8 @@ def make_all1(cpm, cpuv, temp_fix_das4flat_fee):
     ###########################################################
 
     cpm.loc[cpm['Imp Type'] == 'CPM', 'Price Calculation Type'] = 'CPM'
-    cpuv.loc[cpuv['UV entered'] > 0, 'Price Calculation Type'] = 'CPUV'
+    if len(cpuv) > 0:
+        cpuv.loc[cpuv['UV entered'] > 0, 'Price Calculation Type'] = 'CPUV'
 
     ###########################################################
     # Combine CPUV and CPM
