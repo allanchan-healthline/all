@@ -4,11 +4,9 @@
 ROOT=$(dirname $(dirname "$(readlink -f "$0")"))
 
 # Logging
-LOG_START_TIME=$(date '+%Y-%m-%d-%H-%M-%S')
-SCRIPT_NAME=$(basename $0)
-LOG_FILE_NAME="${ROOT}/logs/${LOG_START_TIME}_${SCRIPT_NAME/.sh/.log}"
-
-echo "${LOG_START_TIME} Start" > $LOG_FILE_NAME
+TODAY=`date '+%Y%m%d'`
+STATUS=${ROOT}/logs/${0##*/}.$TODAY.log
+echo "[`date '+%Y-%m-%d %H:%M:%S.%s'`] Starting $0" > $STATUS
 
 # Main
 export PATH="/usr/local/anaconda3/bin:$PATH"
@@ -22,7 +20,7 @@ PREVIOUS_MONTH=`date -d "- 1 month" "+%Y_%m"`
 
 for YEAR_MO in ${PREVIOUS_MONTH} ${CURRENT_MONTH} 
 do
-    echo "$(date '+%Y-%m-%d-%H-%M-%S') For loop YEAR_MO=${YEAR_MO} Start" >> $LOG_FILE_NAME
+    echo "[`date '+%Y-%m-%d %H:%M:%S.%s'`] For loop YEAR_MO=${YEAR_MO} Start" >> $STATUS
     RUNNING="running_$YEAR_MO"
     if [ -f $RUNNING ]
     then
@@ -30,12 +28,10 @@ do
     else
         touch $RUNNING
         FILE="always_up2date_$YEAR_MO.py"
-        python $FILE
+        python $FILE >> $STATUS 2>&1
         rm $RUNNING
     fi
 done
 
 # Logging
-LOG_END_TIME=$(date '+%Y-%m-%d-%H-%M-%S')
-echo "${LOG_END_TIME} End" >> $LOG_FILE_NAME
-mv $LOG_FILE_NAME "${LOG_FILE_NAME}_done"
+echo "[`date '+%Y-%m-%d %H:%M:%S.%s'`] Ended $0" >> $STATUS
