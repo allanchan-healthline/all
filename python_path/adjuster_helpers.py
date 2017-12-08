@@ -124,7 +124,9 @@ def get_grouped_aj3rd(path_adjuster_report, for_1st_party):
                     if row[0] == 'Report Warning:':
                         aj_warning = row[1]
     except IOError as e:
-        print('can\'t open path_adjuster_report with exception: {}'.format(e))
+        print('data error: {}'.format(e))
+        print('data error: file:', path_adjuster_report)
+        print('data error: Type:', for_1st_party)
 
     if aj_warning is not None:
         aj_warning = aj_warning[aj_warning.index(':') + 1:]
@@ -146,7 +148,10 @@ def get_grouped_aj3rd(path_adjuster_report, for_1st_party):
     try:
         df['Impressions (3rd Party)'] = [int(imp.replace(',', '')) if isinstance(imp, str) else 0 for imp in df['Impressions (3rd Party)']]
     except Exception as e:
-        print('can\'t convert imp to int: {}'.format(e))
+        print('data error: {}'.format(e))
+        print('data error: column:', 'Impressions (3rd Party)')
+        print('data error: file:', path_adjuster_report)
+        print('data error: Type:', for_1st_party)
     else:
         # Date formatting
         df['Report Start Date'] = pd.to_datetime(df['Report Start Date']).dt.date

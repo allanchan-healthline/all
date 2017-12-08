@@ -334,8 +334,8 @@ def get_microsite_uvs(site, mo_year, gsheet_file_id, cpuv_goals_sheet, mnt_uv_tr
             result = service.spreadsheets().values().get(spreadsheetId=gsheet_file_id, range=sheet).execute()
             values = result.get('values', [])
         except googleapiclient.errors.HttpError as e:
-            print(e)
-            print('A tab named ' + sheet + ' is not in the ' + site + ' tracker.')
+            print('data error: ', e)
+            print('data error: ', 'A tab named ' + sheet + ' is not in the ' + site + ' tracker.')
             continue
 
         # Find the 'Date' row
