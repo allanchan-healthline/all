@@ -37,6 +37,6 @@ done
 echo "[`date '+%Y-%m-%d %H:%M:%S.%s'`] Ended $0" >> $STATUS
 
 # send out email
-ERROR=$"Subject: AdBook Data Issues\n$(grep -e 'data error:' $STATUS)"
+ERROR="Subject: AdBook Data Issues\n$(grep -e 'data error:' $STATUS)"
 RECIPIENTS="werickson@healthline.com,kumiko.kashii@healthline.com,fouyang@healthline.com"
 echo -e "$ERROR" |sendmail -t -ffouyang@healthline.com "$RECIPIENTS" 
