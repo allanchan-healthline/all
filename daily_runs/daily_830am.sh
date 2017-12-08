@@ -26,7 +26,6 @@ then
 fi
 
 python das_agg2gsheet_n_gdrive.py $YEAR $MONTH
-#python drugs_mtd2gsheet.py
 
 # Logging
 LOG_END_TIME=$(date '+%Y-%m-%d-%H-%M-%S')

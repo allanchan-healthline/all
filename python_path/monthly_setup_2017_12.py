@@ -1,4 +1,4 @@
-
+#
 MO_YEAR = (12, 2017)
 
 MONTHLY_SHEET_NAME = {'pas': 'Dec', 'cpuv goals': 'Dec'}
@@ -19,7 +19,8 @@ LS_CORRECT_RATE_DICT = {'Duopa': 1.00,
                         'Trintellix': 1.00,
                         'Trulance': 1.00}
 
-DRUGS_CORRECT_RATE_LIST = [('17-319', 'Toujeo', 'HL D LS m.HL m.D Sponsorship of T2D Microsite', 1.00)]
+DRUGS_CORRECT_RATE_LIST = [('17-319', 'Toujeo', 'HL D LS m.HL m.D Sponsorship of T2D Microsite', 1.00),
+                           ('17-277', 'benralizumab', 'D m.D Brand Championing (Fasenra)', 0.30)]  # Charge Flat-fee, pay CC
 
 UV_TRACKER_RENAME_DICT = {'Drugs.com': {},
 
@@ -37,6 +38,9 @@ UV_TRACKER_RENAME_DICT = {'Drugs.com': {},
 def TEMP_FIX_DAS4FLAT_FEE(das):
     das = das.copy()
     das.loc[(das['Brand'] == 'Ruconest') & (das['Line Description'] == 'D GRx m.D m.GRx Competitive Conquesting (Fizayr, Cinryze, Berinert, Kalbitor, Haegarda, Ruconest) [PLACEHOLDER]'), 'Base Rate'] = 4.00
+    das.loc[(das['Brand'] == 'benralizumab') & (das['Line Description'] == 'D m.D Brand Championing (Fasenra)'), ('Price Calculation Type', 'Base Rate')] = ('CPUV', 1.0)
+    return das
+
     return das
 
 PARTNER_CAPPING_SP_CASE = [
