@@ -119,6 +119,7 @@ def get_grouped_aj3rd(path_adjuster_report, for_1st_party):
     try:
         with open(path_adjuster_report, 'r') as f:
             reader = csv.reader(f)
+
             for row in reader:
                 if len(row) > 0:
                     if row[0] == 'Report Warning:':
@@ -144,39 +145,33 @@ def get_grouped_aj3rd(path_adjuster_report, for_1st_party):
 
     df = pd.read_csv(path_adjuster_report, skiprows=8, encoding='utf-8')
 
-    # Imps are in str format. Convert to int
-    try:
-        df['Impressions (3rd Party)'] = [int(imp.replace(',', '')) if isinstance(imp, str) else 0 for imp in df['Impressions (3rd Party)']]
-    except Exception as e:
-        print('data error: {}'.format(e))
-        print('data error: column:', 'Impressions (3rd Party)')
-        print('data error: file:', path_adjuster_report)
-        print('data error: Type:', for_1st_party)
-    else:
-        # Date formatting
-        df['Report Start Date'] = pd.to_datetime(df['Report Start Date']).dt.date
+    # Imps are in str format. Convert to int. Set invalid str to NaN
+    df['Impressions (3rd Party)'] = pd.to_numeric(df['Impressions (3rd Party)'].str.replace(',', ''), errors='coerce')
 
-        #######################################################################
-        # Group by (map col, 3rd Party Name, Date)
-        #######################################################################
+    # Date formatting
+    df['Report Start Date'] = pd.to_datetime(df['Report Start Date']).dt.date
 
-        groupby_col = [map_col, '3rd Party Name', 'Report Start Date']
-        df = df[groupby_col + ['Impressions (3rd Party)']]
-        df = df.groupby(groupby_col).sum().reset_index()
+    #######################################################################
+    # Group by (map col, 3rd Party Name, Date)
+    #######################################################################
 
-        #######################################################################
-        # Exclude ones in warning
-        #######################################################################
+    groupby_col = [map_col, '3rd Party Name', 'Report Start Date']
+    df = df[groupby_col + ['Impressions (3rd Party)']]
+    df = df.groupby(groupby_col).sum().reset_index()
 
-        if aj_warning is not None:
-            for server_name in aj_warning_dict:
-                df.loc[(df['3rd Party Name'] == server_name) &
-                       (df['Report Start Date'] >= aj_warning_dict[server_name]),
-                       'AJ Warning'] = 1
+    #######################################################################
+    # Exclude ones in warning
+    #######################################################################
 
-            df = df[df['AJ Warning'] != 1].drop('AJ Warning', axis=1)
+    if aj_warning is not None:
+        for server_name in aj_warning_dict:
+            df.loc[(df['3rd Party Name'] == server_name) &
+                   (df['Report Start Date'] >= aj_warning_dict[server_name]),
+                   'AJ Warning'] = 1
 
-        return df
+        df = df[df['AJ Warning'] != 1].drop('AJ Warning', axis=1)
+
+    return df
 
 #######################################################################
 # Get a mapping DFP report
