@@ -142,11 +142,10 @@ def get_grouped_aj3rd(path_adjuster_report, for_1st_party):
     #######################################################################
     # Import and fix formatting
     #######################################################################
-
-    df = pd.read_csv(path_adjuster_report, skiprows=8, encoding='utf-8')
+    df = pd.read_csv(path_adjuster_report, skiprows=8, encoding='utf-8', na_filter=False)
 
     # Imps are in str format. Convert to int. Set invalid str to NaN
-    df['Impressions (3rd Party)'] = pd.to_numeric(df['Impressions (3rd Party)'].str.replace(',', ''), errors='coerce')
+    df['Impressions (3rd Party)'] = pd.to_numeric(df['Impressions (3rd Party)'].str.replace(',',''), errors='coerce')
 
     # Date formatting
     df['Report Start Date'] = pd.to_datetime(df['Report Start Date']).dt.date
