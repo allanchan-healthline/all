@@ -119,7 +119,6 @@ def get_grouped_aj3rd(path_adjuster_report, for_1st_party):
     try:
         with open(path_adjuster_report, 'r') as f:
             reader = csv.reader(f)
-
             for row in reader:
                 if len(row) > 0:
                     if row[0] == 'Report Warning:':
@@ -142,6 +141,7 @@ def get_grouped_aj3rd(path_adjuster_report, for_1st_party):
     #######################################################################
     # Import and fix formatting
     #######################################################################
+    # na_filter=False, prevent setting empty string to NaN
     df = pd.read_csv(path_adjuster_report, skiprows=8, encoding='utf-8', na_filter=False)
 
     # Imps are in str format. Convert to int. Set invalid str to NaN
