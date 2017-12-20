@@ -1,4 +1,4 @@
-#
+
 MO_YEAR = (12, 2017)
 
 MONTHLY_SHEET_NAME = {'pas': 'Dec', 'cpuv goals': 'Dec'}
