@@ -609,3 +609,20 @@ def gsheet_get_sheet_names(ss_id):
         sheets.append(sheet_metadata['properties']['title'])
 
     return sheets
+
+def gsheet_move_sheet(name, ss_id, new_index=0):
+    """Move a sheet with a specified name in a specified Google Sheet spreadsheet, to a specified index."""
+
+    service = get_gsheet_service()
+
+    s_id = gsheet_get_sheet_id_by_name(name, ss_id)
+    if s_id is not None:
+        request_body = {'requests': [{'updateSheetProperties': {'properties': {'sheetId': s_id,
+                                                                               'index': new_index},
+                                                                'fields': 'index'}}]}
+        result = service.spreadsheets().batchUpdate(spreadsheetId=ss_id, body=request_body).execute()
+
+    return None
+
+
+
