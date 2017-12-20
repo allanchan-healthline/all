@@ -35,3 +35,11 @@ done
 
 # Logging
 echo "[`date '+%Y-%m-%d %H:%M:%S.%s'`] Ended $0" >> $STATUS
+
+# send out email
+ERROR="Subject: AdBook Data Issues\n$(grep -e 'data error:' $STATUS)"
+# if there is any data errors, send out an alert email
+if [[ $ERROR == *"data error"* ]]; then
+	RECIPIENTS="werickson@healthline.com,fouyang@healthline.com"
+	echo -e "$ERROR" |sendmail -t -ffouyang@healthline.com "$RECIPIENTS" 
+fi

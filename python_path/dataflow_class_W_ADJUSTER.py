@@ -95,7 +95,7 @@ class MicrositeUVs(DataFlow):
         try:
             raw_df = get_microsite_uvs(self.site, self.mo_year, DataFlow.UV_TRACKER_GSHEET[self.site], DataFlow.MONTHLY_SHEET_NAME['cpuv goals'], DataFlow.MNT_UV_TRACKER_TABS)
         except Exception as e:
-            print('calling get_raw_df with exception: {}'.format(e))
+            print('data error: calling get_raw_df with exception: {}'.format(e))
         else:
             return raw_df
 
@@ -103,7 +103,7 @@ class MicrositeUVs(DataFlow):
         try:
             labeled_df = label_microsite_uvs(self.get_raw_df(), self.mo_year, DataFlow.MONTHLY_SHEET_NAME['cpuv goals'], DataFlow.UV_TRACKER_RENAME_DICT)
         except Exception as e:
-            print('calling get_labeled_df with exception: {}'.format(e))
+            print('data error: calling get_labeled_df with exception: {}'.format(e))
         else:
             return labeled_df
 
@@ -132,7 +132,7 @@ class CC_UVs(DataFlow):
         try:
             raw_df = get_cc_uvs(self.site, self.mo_year, DataFlow.MONTHLY_SHEET_NAME['cpuv goals'])
         except Exception as e:
-            print('calling get_raw_df with exception {}'.format(e))
+            print('data error: calling get_raw_df with exception {}'.format(e))
         else:
             return raw_df
 
@@ -140,7 +140,7 @@ class CC_UVs(DataFlow):
         try:
             labeled_df = label_cc_uvs(self.get_raw_df(), self.mo_year, DataFlow.MONTHLY_SHEET_NAME['cpuv goals'])
         except Exception as e:
-            print('calling get_labeled_df with exception {}'.format(e))
+            print('data error: calling get_labeled_df with exception {}'.format(e))
         else:
             return labeled_df
 
