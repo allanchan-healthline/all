@@ -12,8 +12,10 @@ from datetime import datetime, date, timedelta
 import re
 
 #################################################################
-PAS_WHICH_GSHEET = {2017: '1E-20h0owGXilIHBrCjpUoY_900wOv83LSKOeBGsUeXw'}
-CPUV_GOALS_WHICH_GSHEET = {2017: '1_9ahzi07esrSELD2LWT4aQ3pGu5mXqip9b_tg7D7A_w'}
+PAS_WHICH_GSHEET = {2018: '1pK_NC4dtkvx97QHAD09cCLtioF8P2F3pWxVQDWV4yY8',
+                    2017: '1E-20h0owGXilIHBrCjpUoY_900wOv83LSKOeBGsUeXw'}
+CPUV_GOALS_WHICH_GSHEET = {2018: '1aaiV_sjNCdrdQNXHsoDb9UTmcbKo0CjIRJ4umqKFW_4',
+                           2017: '1_9ahzi07esrSELD2LWT4aQ3pGu5mXqip9b_tg7D7A_w'}
 
 CC_TRACKER_GSHEET = {'Drugs.com': '1zXIoBgG2BG7qH-83SkOsvdlJe9tVnmvGCArCbV-eSfw',
                      'GoodRx': '1lqc2zkX88f8xTB2szFuwNgoN_PC0G2y60onJw4ad4sE'}
