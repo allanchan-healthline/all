@@ -184,6 +184,8 @@ class CPUV(DataFlow):
         self.name = 'cpuv'
         self.dependency_list = [CPUV_Goals(self.mo_year)]
         for site in ['Drugs.com', 'Livestrong', 'EmpowHer', 'HL', 'MNT']:
+            if site not in DataFlow.UV_TRACKER_GSHEET:
+                continue
             self.dependency_list.append(MicrositeUVs(site, self.mo_year))
         for site in ['Drugs.com', 'GoodRx']:
             self.dependency_list.append(CC_UVs(site, self.mo_year))
