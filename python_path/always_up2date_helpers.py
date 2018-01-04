@@ -145,12 +145,13 @@ def label_dfp_mtd_all(dfp_mtd_all):
     patient_info = re.compile('Patient\.Info_Direct')
     rxwiki = re.compile('HN US/HMN RXWiki - Direct')
     skinsight = re.compile('HN US/HMN SkinSight - Direct')
+    bco = re.compile('BCO ')
 
     site_dict = {ask_1: 'Ask', ask_2: 'Ask', bhm: 'Black Health Matters', dailyrx: 'dailyRX', dr_oz: 'Dr Oz',
                  dr_gourmet: 'Dr.Gourmet', drugs_1: 'Drugs.com', drugs_2: 'Drugs.com', ehow: 'eHow',
                  emedtv: 'eMedTV', empowher: 'EmpowHer', goodrx: 'GoodRx', livestrong_1: 'Livestrong',
                  livestrong_2: 'Livestrong', mnt: 'Medical News Today', patient_info: 'Patient Info',
-                 rxwiki: 'RxWiki', skinsight: 'SkinSight'}
+                 rxwiki: 'RxWiki', skinsight: 'SkinSight', bco: 'Breastcancer.org'}
 
     def add_site(ad_unit):
         for key in site_dict:
