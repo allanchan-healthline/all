@@ -242,8 +242,9 @@ def get_cpuv_goals(year, sheet):
     uv_goals_df = uv_goals_df[[isinstance(cell, str) for cell in uv_goals_df['OLI']]]
 
     # Empty cells are in the string type. Convert them to numeric (float).
-    for site_goal in ['HL Goal', 'Drugs Goal', 'LS Goal', 'GoodRx Goal', 'EmpowHer Goal', 'MNT Goal']:
-        uv_goals_df[site_goal] = pd.to_numeric(uv_goals_df[site_goal])
+    for site_goal in ['HL Goal', 'Drugs Goal', 'GoodRx Goal', 'MNT Goal', 'BCO Goal', 'LS Goal', 'EmpowHer Goal']:
+        if site_goal in uv_goals_df.columns.tolist():
+            uv_goals_df[site_goal] = pd.to_numeric(uv_goals_df[site_goal])
 
     # Convert date columns from Int type to Date type
     for date_col in ['Start Date', 'End Date']:
@@ -267,7 +268,8 @@ def get_revshare_dict():
                      'Livestrong': 0.4,
                      'Medical News Today': 0.0,
                      'Patient Info': 0.4,
-                     'SkinSight': 0.5}
+                     'SkinSight': 0.5,
+                     'Breastcancer.org': 0.5}
     return revshare_dict
 
 ###################################################################

@@ -474,7 +474,7 @@ def get_site_goals(mo_year, pas_sheet, cpuv_goals_sheet, ls_correct_rate_dict,
     # PAS goals and Disc
     ###################################################################
 
-    pas_relable_sites = {'Drugs': 'Drugs.com', 'MNT': 'Medical News Today'}
+    pas_relable_sites = {'Drugs': 'Drugs.com', 'MNT': 'Medical News Today', 'BCO': 'Breastcancer.org'}
     pas = pas.rename(columns=pas_relable_sites)
 
     das_1 = das_thismonth[['BBR', 'Campaign Name', 'Brand']].drop_duplicates()
@@ -501,14 +501,21 @@ def get_site_goals(mo_year, pas_sheet, cpuv_goals_sheet, ls_correct_rate_dict,
     ###################################################################
 
     das_2 = das_thismonth[['Campaign Name', 'Brand']].drop_duplicates()
-    cpuv_col_site_dict = {'HL Goal': 'HL', 'Drugs Goal': 'Drugs.com', 'LS Goal': 'Livestrong',
-                          'GoodRx Goal': 'GoodRx', 'EmpowHer Goal': 'EmpowHer',
-                          'MNT Goal': 'Medical News Today'}
+    cpuv_col_site_dict = {'HL Goal': 'HL',
+                          'Drugs Goal': 'Drugs.com',
+                          'GoodRx Goal': 'GoodRx',
+                          'MNT Goal': 'Medical News Today',
+                          'BCO Goal': 'Breastcancer.org',
+                          'LS Goal': 'Livestrong',  # Ended in Dec 2017
+                          'EmpowHer Goal': 'EmpowHer'}  # Ended in Dec 2017
     cpuv_goals = pd.merge(cpuv_goals, das_2, how='left', on='Campaign Name')
 
     cpuv_goals_formatted = pd.DataFrame()
 
     for col in cpuv_col_site_dict:
+        if col not in cpuv_goals.columns.tolist():
+            continue
+
         cpuv_goals_per_site = cpuv_goals[['BBR', 'Brand', 'Line Description', col, 'Report Tab Name', 'Max at Goal']].rename(columns={col: 'Site Goal'})
         if cpuv_col_site_dict[col] == 'HL':
             cpuv_goals_per_site.loc[pd.isnull(cpuv_goals_per_site['Site Goal']), 'Site Goal'] = 0

@@ -427,6 +427,9 @@ def get_cc_uvs(site, mo_year, cpuv_goals_sheet):
         df['Original Report Tab Name'] = site[0] + '_' + gsrange + '_' + col
         output = pd.concat([output, df])
 
+    if len(output) == 0:  # Done
+        return pd.DataFrame(columns=['Site', 'Original Report Tab Name', 'Date', 'UVs'])
+
     ###########################################################
     # Pick only this month's uvs
     ###########################################################
