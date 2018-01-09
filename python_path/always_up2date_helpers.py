@@ -583,10 +583,14 @@ def get_site_goals(mo_year, pas_sheet, cpuv_goals_sheet, ls_correct_rate_dict,
                   (goals['DAS Line Item Name'] == ld),
                   'Non-standard Site Rate'] = rate
 
-    ## Drugs CPUV CC 30 cents
+    ## Drugs CPUV CC 30 cents for 2017, 40 cents for 2018
+    drugs_cc_cpm = 0.4
+    if mo_year[0] == 2017:
+        drugs_cc_cpm = 0.3
+    
     goals.loc[(goals['Price Calculation Type'] == 'CPUV') &
               (goals['DAS Line Item Name'].str.contains('Competitive Conquesting')) &
-              (goals['Site'] == 'Drugs.com'), 'Non-standard Site Rate'] = 0.3
+              (goals['Site'] == 'Drugs.com'), 'Non-standard Site Rate'] = drugs_cc_cpm
 
     ## Patient Info
     #goals.loc[goals['Site'] == 'Patient Info', 'Non-standard Site Rate'] = 10.0
