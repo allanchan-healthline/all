@@ -126,7 +126,7 @@ def make_das(use_scheduled_units=False, export=False):
     index_list = ['BBR', 'Campaign Name', 'Flight Type', 'Brand: Brand Name', 'Account Name: Account Name', 'Agency: Account Name',
                   'IO Number', 'Start Date', 'End Date', 'Approval Date', 'Stage', 'Billing Details', 'Customer Billing ID', 'Billing Profile Name',
                   'Opportunity Owner: Full Name',
-                  '2nd Opportunity Owner: Full Name', 'Account Manager: Full Name', 'Campaign Manager: Full Name', 'Advertiser Vertical',
+                  '2nd Opportunity Owner: Full Name', 'Client Services: Full Name', 'Campaign Manager: Full Name', 'Advertiser Vertical',
                   'Product: Product Name', 'Contracted Sites', 'Contracted Devices', 'Line Item Number', 'OLI', 'Billable Reporting Source',
                   'Viewability Source', 'Viewability', 'Blocking System', 'Line Description', 'Contracted Sizes', 'Price Calculation Type',
                   'Sales Price', 'Base Rate', 'Baked-In Production Rate', 'Total Price', 'Total Units']
@@ -146,7 +146,7 @@ def make_das(use_scheduled_units=False, export=False):
                    'Agency: Account Name': 'Agency',
                    'Opportunity Owner: Full Name': 'Opportunity Owner',
                    '2nd Opportunity Owner: Full Name': '2nd Opportunity Owner',
-                   'Account Manager: Full Name': 'Account Manager',
+                   'Client Services: Full Name': 'Account Manager',
                    'Campaign Manager: Full Name': 'Campaign Manager',
                    'Product: Product Name': 'Product',
                    'Billing Profile Name': 'Customer Billing Name'}
