@@ -403,8 +403,32 @@ def get_line_info(line_dict):
 
     return line_info
 
+def insertRevenuePadding(list01, list02):
+    '''
+        The purpose is list01 has same length as list02 by inserting '0' as padding to the shortter list at the indices of where the longer list's columns start with "$"
+        example: 
+            list01: ['Date', '3rd Party', 'DFP', 'HL 160 x 600', 'HL 300 x 250', 'HL 300 x 600', 'HL 728 x 90', '* HL', '$ HL']
+            list02: ['MTD', 315813.0, 331844, 267, 285009, 2828, 43740, 331844]
+            list02 will become: ['MTD', 315813.0, 331844, 267, 285009, 2828, 43740, 331844, 0]
+    '''
+    if len(list01) > len(list02):
+        long_list = list01
+        short_list = list02
+    else:
+        long_list = list02
+        short_list = list01
+
+    index_of_revenue = [long_list.index(element) for element in long_list if element.startswith('$')]
+    for index in index_of_revenue:
+        short_list.insert(index, 0)
+
+    return (long_list, short_list)        
+
 def get_values_sum_top(header, values_sum):
     """Return a list of MTD delivery total. One element pre column."""
+    
+    if len(header) != len(values_sum):
+        header, values_sum = insertRevenuePadding(header, values_sum)    
 
     values_sum_top = []
 
@@ -547,7 +571,7 @@ def make_pacing_color_list(pacing_list, need_daily_list):
 
     return color_list
 
-def make_last_day_color_list(values_sum_top, type, goals, aims):
+def make_last_day_color_list(values_sum_top, campaign_type, goals, aims):
     """Return a list of 'hit_goal' or None, to be used for adding css class. One element per column."""
 
     color_last_day = [None] * len(values_sum_top)
@@ -556,7 +580,7 @@ def make_last_day_color_list(values_sum_top, type, goals, aims):
         value = values_sum_top[i]
         if isinstance(value, str):
             continue
-        if type == 'CPUV':
+        if campaign_type == 'CPUV':
             goal_or_aim = goals[i]
         else:
             goal_or_aim = aims[i]
@@ -603,7 +627,7 @@ def get_col_label_list(header):
     for col in header:
         if col in ['Date', '3rd Party', 'DFP', 'Total']:
             col_label_list.append('li_col_all')
-        elif col.startswith('*'):
+        elif col.startswith('*') or col.startswith('$'):
             col_label_list.append('li_col_site_total' + ' ' + extract_site_abbr(col))
         else:
             col_label_list.append('li_col_site_size' + ' ' + extract_site_abbr(col))
@@ -612,7 +636,6 @@ def get_col_label_list(header):
 
 def make_ab_campaign_html(campaign_dict, last_delivery_date, non_html, output_folder_name):
     """Create and save an html file for a specified campaign."""
-
     doc, tag, text = Doc().tagtext()
 
     with tag('html'):
@@ -698,8 +721,29 @@ def make_ab_campaign_html(campaign_dict, last_delivery_date, non_html, output_fo
                         # Values
                         ############################################################################
 
-                        header = line_dict['delivery'].columns.tolist()
-                        values = line_dict['delivery'].values.tolist()
+                        # calculate the CPM/CPUV revenue by using each site's total impression
+                        revenue_frame  = line_dict['delivery'].filter(like='*') / 1000 * line_dict['base_rate']
+
+                        # rename '* site_name' to '$ site_name'
+                        rename_dict = {}
+                        for col in revenue_frame.columns.tolist():
+                            new_col = col.replace('*','$')
+                            rename_dict[col] = new_col
+                        revenue_frame = revenue_frame.rename(columns=rename_dict) 
+
+                        # create a new dataframe by combining the revenue dataframe with delivery dataframe
+                        delivery_revenue = pd.merge(line_dict['delivery'], revenue_frame, left_index=True, right_index=True)
+                       
+                        # putting the site total revenue column next to the site total impression column  
+                        sorted_cols = []
+                        for col in line_dict['delivery'].columns.tolist():
+                            sorted_cols.append(col)
+                            if col.startswith('*'):
+                                sorted_cols.append(rename_dict[col])
+                        delivery_revenue = delivery_revenue[sorted_cols]  
+
+                        header = delivery_revenue.columns.tolist()
+                        values = delivery_revenue.values.tolist()
                         values_sum = line_dict['delivery_sum'].tolist()
                         values_sum[0] = 'MTD'
                         values_sum_top = get_values_sum_top(header, values_sum)
@@ -721,8 +765,8 @@ def make_ab_campaign_html(campaign_dict, last_delivery_date, non_html, output_fo
                         color_by_pacing_end = make_pacing_color_list(pacing_yesterday_end, needs_daily_end)
                         color_by_pacing_25 = make_pacing_color_list(pacing_yesterday_25, needs_daily_25)
 
-                        type = line_dict['type']
-                        color_last_day = make_last_day_color_list(values_sum_top, type, goals, aims)
+                        campaign_type = line_dict['type']
+                        color_last_day = make_last_day_color_list(values_sum_top, campaign_type, goals, aims)
 
                         ############################################################################
                         # Convert values to string for html
@@ -743,7 +787,7 @@ def make_ab_campaign_html(campaign_dict, last_delivery_date, non_html, output_fo
                         pacing_yesterday_25 = list(map(percent_format_int, pacing_yesterday_25))
 
                         # Change DFP to Total for CPUV
-                        if type == 'CPUV':
+                        if campaign_type == 'CPUV':
                             header[header.index('DFP')] = 'Total'
 
                         ############################################################################
@@ -753,7 +797,7 @@ def make_ab_campaign_html(campaign_dict, last_delivery_date, non_html, output_fo
                         month_end = start_end_month(last_delivery_date)[1]
 
                         if last_delivery_date.day < month_end.day:
-                            if type == 'CPUV':
+                            if campaign_type == 'CPUV':
                                 above_header = [(pacing_yesterday_end, color_by_pacing_end),
                                                 values_sum_top,
                                                 goals]
@@ -773,7 +817,7 @@ def make_ab_campaign_html(campaign_dict, last_delivery_date, non_html, output_fo
                                     above_header.pop(1)
                                     below_delivery.pop(1)
                         else:
-                            if type == 'CPUV':
+                            if campaign_type == 'CPUV':
                                 above_header = [(values_sum_top, color_last_day), goals]
                             else:
                                 above_header = [(values_sum_top, color_last_day), aims, discs, goals]
