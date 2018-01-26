@@ -73,21 +73,15 @@ td.cold {
 }
 
 #campaign_html_menu {
-  position: fixed;
   top: 0px;
   width: 100%;
   background-color: white;
 }
 
 #camp_header {
-  position: fixed;
   top: 15px;
   width: 100%;
   background-color: white;
-}
-
-#camp_details {
-  margin-top: 125px;
 }
 
 #camp_header,
