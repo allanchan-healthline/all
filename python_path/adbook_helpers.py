@@ -732,12 +732,17 @@ def make_ab_campaign_html(campaign_dict, last_delivery_date, non_html, output_fo
                         # Values
                         ############################################################################
                         # calculate the HLCPM/HWCPM/HLCPUV/HWCPUV/Total CPM/Total CPUV revenue
-                        if line_dict['type'] == 'CPM':
-                            revenue_df = line_dict['delivery'].filter(like='*') / 1000 * line_dict['base_rate']
-                            revenue_3rd_party = (line_dict['delivery']['3rd Party'] / 1000 * line_dict['base_rate']).sum()
-                        else:
-                            revenue_df = line_dict['delivery'].filter(like='*') * line_dict['base_rate']
-                            revenue_3rd_party = (line_dict['delivery']['3rd Party'] * line_dict['base_rate']).sum()
+                        try: 
+                            if line_dict['type'] == 'CPM':
+                                revenue_df = line_dict['delivery'].filter(like='*') / 1000 * line_dict['base_rate']
+                                revenue_3rd_party = (line_dict['delivery']['3rd Party'] / 1000 * line_dict['base_rate']).sum()
+                            else:
+                                revenue_df = line_dict['delivery'].filter(like='*') * line_dict['base_rate']
+                                revenue_3rd_party = (line_dict['delivery']['3rd Party'] * line_dict['base_rate']).sum()
+                        except KeyError as e:
+                            print('data error: {}'.format(e))
+                            if e.args[0] == '3rd Party':
+                                revenue_3rd_party = 0.0
                         total_3rd_party_revenue[line_dict['type']] += revenue_3rd_party
                         get_revenue_sum_by_type(revenue_df, line_dict['type'], total_dfp_revenue)
                         revenue_display_df = revenue_df.applymap("${0:.2f}".format) 
