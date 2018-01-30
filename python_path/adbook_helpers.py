@@ -635,14 +635,123 @@ def get_col_label_list(header):
 
     return col_label_list
 
-def get_revenue_sum_by_type(revenue_df, campaign_type, total_dfp_revenue):
+def get_revenue_sum_by_campaign_type(revenue_df, campaign_type, total_dfp_revenue):
+    '''
+        sample:
+        total_dfp_revenue = dict(HLCPM = 123.42, HWCPM = 0, HLCPUV = 78.91, HWCPUV = 0)
+    '''
     sum_revenue_by_site = revenue_df.sum()
     all_sites = sum_revenue_by_site.index.values.tolist()
+    # all_site_category sample: [('HLCPM', 142.98),('HWCPM', 5.4),('HLCPUV',34.65),('HWCPUV',6.09)]
     all_site_category = [('HL' + campaign_type, sum_revenue_by_site[element]) if 'HL' in element or 'MNT' in element else ('HW' + campaign_type, sum_revenue_by_site[element]) for element in all_sites]
     for site_category in all_site_category:
        total_dfp_revenue[site_category[0]] += site_category[1] 
 
-def make_ab_campaign_html(campaign_dict, last_delivery_date, non_html, output_folder_name):
+def get_campaign_aggregation_by_type(date_df, revenue_df, campaign_type):
+    '''
+        sample return:
+                  Date  HLCPUV  HWCPUV
+        0   2017-12-01     0.0     0.0
+        1   2017-12-02     0.0     0.0
+    '''
+    # split the revenue dataframe into HL revenue dataframe and HW revenue dataframe
+    HL_cols_df = revenue_df.filter(regex='HL|MNT')
+    HL_cols = HL_cols_df.columns.tolist()
+    HW_cols_df = revenue_df.drop(HL_cols, axis=1)
+    # sum different sites revnue by dates(row), and create a new datafrom with HLCPM/HLCPUV/HWCPM/HWCPUV as column name
+    HL_cols_df_sum = pd.DataFrame(HL_cols_df.sum(axis=1), columns=['HL' + campaign_type])
+    HW_cols_df_sum = pd.DataFrame(HW_cols_df.sum(axis=1), columns=['HW' + campaign_type])
+    # combine 3 dataframe into 1 dataframe which has Date/HLCPM/HLCPUV/HWCPM/HWCPUV as column names
+    aggregate_sum_df = date_df.merge(HL_cols_df_sum, left_index=True, right_index=True).merge(HW_cols_df_sum, left_index=True, right_index=True)
+    return aggregate_sum_df
+
+def make_summary_book_html(lineitems_revenue_aggregation, non_html, output_folder_name, aggregation_total):
+    """Create and save an html file for summary book."""
+    doc, tag, text = Doc().tagtext()
+
+    with tag('html'):
+        with tag('head'):
+            doc.stag('link', rel='stylesheet', type='text/css', href=non_html['css'])
+            doc.stag('link', rel='stylesheet', type='text/css', href=non_html['jqui css'])
+
+        with tag('body'):
+            ############################################################################
+            # Summary book header 
+            ############################################################################
+            with tag('div'):
+                with tag('h1'):
+                    text('Summary Book')
+
+            ############################################################################
+            # Line Items
+            ############################################################################
+
+            ############################################################################
+            # Line Item Table
+            ############################################################################
+            
+            if len(lineitems_revenue_aggregation.index) > 0:
+                header = lineitems_revenue_aggregation.columns.tolist() 
+                values = lineitems_revenue_aggregation.values.tolist()
+                values.append(aggregation_total)
+                def add_header_row():
+                    with tag('tr'):
+                        for i in range(len(header)):
+                            col = header[i]
+                            klass = 'not_regular'
+                            with tag('th', klass=klass):
+                                text(col)
+
+                def add_rows(list_of_list):
+                    for row in list_of_list:
+                        row_content = row
+                        row_color = [None] * len(row_content)
+                        with tag('tr'):
+                            for ith_cell in range(len(row_content)):
+                                cell_content = row_content[ith_cell]
+                                cell_color = row_color[ith_cell]
+                                if ith_cell == 0:
+                                    with tag('th'):
+                                        text(cell_content)
+                                else:
+                                    with tag('td'):
+                                        text(cell_content)
+                with tag('div'):
+                    with tag('table'):
+                        add_header_row()
+                        add_rows(values)
+            else:
+                with tag('div'):
+                    text('No delivery so far.')
+
+            ############################################################################
+            # Javascript
+            ############################################################################
+
+            with tag('script', src='https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js'):
+                pass
+            with tag('script', type='text/javascript', src=non_html['jqui js']):
+                pass
+            with tag('script', type='text/javascript', src=non_html['js']):
+                pass
+
+    ############################################################################
+    # Get text
+    ############################################################################
+    
+    output = indent(doc.getvalue())
+
+    ############################################################################
+    # Write to file
+    ############################################################################
+    
+    file_path = output_folder_name + '/summary_book.html'
+    with open(file_path, 'w') as f:
+        f.write(output)
+
+    return
+
+def make_ab_campaign_html(campaign_dict, last_delivery_date, non_html, output_folder_name, all_line_items_aggregation):
     """Create and save an html file for a specified campaign."""
     doc, tag, text = Doc().tagtext()
 
@@ -744,7 +853,7 @@ def make_ab_campaign_html(campaign_dict, last_delivery_date, non_html, output_fo
                             if e.args[0] == '3rd Party':
                                 revenue_3rd_party = 0.0
                         total_3rd_party_revenue[line_dict['type']] += revenue_3rd_party
-                        get_revenue_sum_by_type(revenue_df, line_dict['type'], total_dfp_revenue)
+                        get_revenue_sum_by_campaign_type(revenue_df, line_dict['type'], total_dfp_revenue)
                         revenue_display_df = revenue_df.applymap("${0:.2f}".format) 
 
                         #rename '* site_name' to 'site_name Rev'
@@ -767,6 +876,8 @@ def make_ab_campaign_html(campaign_dict, last_delivery_date, non_html, output_fo
                                 sorted_cols.append(rename_dict[col])
                         delivery_revenue = delivery_revenue[sorted_cols]  
 
+                        all_line_items_aggregation.append(get_campaign_aggregation_by_type(line_dict['delivery'].filter(items=['Date']), revenue_df, line_dict['type']))
+
                         header = delivery_revenue.columns.tolist()
                         values = delivery_revenue.values.tolist()
                         values_sum = line_dict['delivery_sum'].tolist()
@@ -785,7 +896,6 @@ def make_ab_campaign_html(campaign_dict, last_delivery_date, non_html, output_fo
                         ############################################################################
                         # Colors
                         ############################################################################
-
                         color_by_pacing_end = make_pacing_color_list(pacing_yesterday_end, needs_daily_end)
                         color_by_pacing_25 = make_pacing_color_list(pacing_yesterday_25, needs_daily_25)
 
