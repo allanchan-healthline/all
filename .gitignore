@@ -14,7 +14,6 @@ always_up2date/__pycache__
 daily_runs/DAS\ Agg\ Backup/
 daily_runs/DCM Reports/
 
-adbook/
 logs/
 
 manual_runs/das.csv
