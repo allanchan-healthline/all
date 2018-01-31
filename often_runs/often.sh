@@ -31,6 +31,7 @@ then
         python nr2gsheet_n_gdrive.py $YEAR $MONTH
         python clean_gdrive4nr.py
         python check_mapping2gsheet.py $YEAR $MONTH
+        python uvs2gsheet.py $YEAR $MONTH
     fi
     python hw_rev_rep2gdrive.py $YEAR $MONTH
     python clean_gdrive4hw_rev_rep.py

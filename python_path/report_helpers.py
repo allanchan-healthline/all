@@ -1934,4 +1934,68 @@ def format_drugs_mtd(file_id):
     all_requests = freeze + wrap + font + value_formatting + color_header + width
     result = service.spreadsheets().batchUpdate(spreadsheetId=file_id, body={'requests': all_requests}).execute()
 
- 
+def get_monthly_uvs(all1, cpuv_goals):
+    # Format UVs
+    uvs = all1[all1['Price Calculation Type'] == 'CPUV'].rename(columns={'DAS Line Item Name': 'Line Description'})
+    col = ['Campaign Name', 'Line Description', 'Site', 'Impressions/UVs']
+    uvs = pd.pivot_table(uvs[col], index=['Campaign Name', 'Line Description'], columns=['Site'], values='Impressions/UVs', fill_value=0, aggfunc=np.sum).reset_index(drop=False)
+    
+    site_col = []
+    for col in uvs.columns.tolist():
+        if col not in ['Campaign Name', 'Line Description']:
+            site_col.append(col)
+
+    # Join with CPUV Goals Sheet
+    col = ['BBR', 'Campaign Name', 'Flight Type', 'Start Date', 'End Date', 'Line Description', 'Competitive Conquesting', 'Price Calculation Type', 'Goal']
+    goals = cpuv_goals[col]
+    combined = pd.merge(goals, uvs, how='left', on=['Campaign Name', 'Line Description'])
+
+    # Reorder columns
+    combined['Total'] = 0
+    col = ['BBR', 'Campaign Name', 'Flight Type', 'Start Date', 'End Date', 'Line Description', 'Competitive Conquesting', 'Price Calculation Type'] + site_col + ['Total', 'Goal']
+    combined = combined[col]
+
+    return combined
+
+def up_monthly_uvs2gsheet(monthly_uvs2gsheet_dict):
+    
+    ###################################################################
+    folder_id = '1rQfci0UV_mVxjsTHYELyiJx_9MqZkd7z'
+    ###################################################################
+
+    service = get_gsheet_service()
+
+    # Content
+    df = monthly_uvs2gsheet_dict['content']
+
+    # Find a file by its name. If doesnt exist, create.
+    file_name = monthly_uvs2gsheet_dict['ss name']
+    ss_id = gdrive_get_file_id_by_name(file_name, folder_id)
+    if ss_id is None:
+        csv_file_name = file_name + '.csv'
+        df.to_csv(csv_file_name, index=False)
+        file_id = save_csv_as_gsheet_in_gdrive(file_name, folder_id, csv_file_name)
+        os.remove(csv_file_name)
+        return
+
+    # Get sheet id
+    sheet_name = file_name
+    sheet_id = gsheet_get_sheet_id_by_name(sheet_name, ss_id)
+
+    # Prep
+    for col in ['Start Date', 'End Date']:
+        df[col] = [str(d) for d in df[col]]  # date type isn't json serializable
+    df = df.fillna('')
+
+    values = [df.columns.tolist()] + df.values.tolist()
+    
+    # Clear existing values
+    result = service.spreadsheets().values().clear(spreadsheetId=ss_id, range=sheet_name,
+                                                   body={}).execute()
+
+    # Upload new values
+    result = service.spreadsheets().values().update(spreadsheetId=ss_id, range=sheet_name,
+                                                    valueInputOption='USER_ENTERED',
+                                                    body={'values': values}).execute()
+    return None
+
