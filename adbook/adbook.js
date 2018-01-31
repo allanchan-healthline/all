@@ -130,6 +130,23 @@ $(document).ready(function(){
   if (window.name == "iframe_index") {
     $(document.body).addClass("in_iframe");
   }
+
+  CPMTotal = $('.3rd_party_total_cpm').text();
+  CPUVTotal = $('.3rd_party_total_cpuv').text();
+  HLCPMTotal = $('.HLCPM').text();
+  HWCPMTotal = $('.HWCPM').text();
+  HLCPUVTotal = $('.HLCPUV').text();
+  HWCPUVTotal = $('.HWCPUV').text();
+
+  $('#camp_header').append(`
+    <h3>
+      HL CPM: ` + HLCPMTotal + `, HW CPM: ` + HWCPMTotal + `, Total CPM: ` + CPMTotal + `
+    </h3>
+    <h3>
+      HL CPUV: ` + HLCPUVTotal + `, HW CPUV: ` + HWCPUVTotal + `, Total CPUV: ` + CPUVTotal + `
+    </h3>
+  `);
+
 });
 
 $("#iframe_left_wrapper").resizable(); /* need jquery ui */

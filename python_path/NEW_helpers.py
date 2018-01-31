@@ -131,9 +131,15 @@ def make_das(use_scheduled_units=False, export=False):
                   'Viewability Source', 'Viewability', 'Blocking System', 'Line Description', 'Contracted Sizes', 'Price Calculation Type',
                   'Sales Price', 'Base Rate', 'Baked-In Production Rate', 'Total Price', 'Total Units']
     if use_scheduled_units:
-        das = pd.pivot_table(sf_das, index=index_list, columns=['Active Month'], values='Scheduled Units', fill_value=0, aggfunc=np.sum)
+        try:
+            das = pd.pivot_table(sf_das, index=index_list, columns=['Active Month'], values='Scheduled Units', fill_value=0, aggfunc=np.sum)
+        except KeyError as e:
+            print('data error: {}'.format(e))
     else:
-        das = pd.pivot_table(sf_das, index=index_list, columns=['Active Month'], values='Actual Units', fill_value=0, aggfunc=np.sum)
+        try:
+            das = pd.pivot_table(sf_das, index=index_list, columns=['Active Month'], values='Actual Units', fill_value=0, aggfunc=np.sum)
+        except KeyError as e:
+            print('data error: {}'.format(e))
     das = das.reset_index()
 
     #4. Convert dates to date type
