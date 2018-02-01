@@ -849,6 +849,7 @@ def make_ab_campaign_html(campaign_dict, last_delivery_date, non_html, output_fo
                                 revenue_df = line_dict['delivery'].filter(like='*') * line_dict['base_rate']
                                 revenue_3rd_party = (line_dict['delivery']['3rd Party'] * line_dict['base_rate']).sum()
                         except KeyError as e:
+                            print('data error: Campaign Name - {}'.format(campaign_dict['name']))
                             print('data error: {}'.format(e))
                             if e.args[0] == '3rd Party':
                                 revenue_3rd_party = 0.0
