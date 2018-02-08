@@ -356,22 +356,39 @@ def get_microsite_uvs(site, mo_year, gsheet_file_id, cpuv_goals_sheet, mnt_uv_tr
         # Extract date and uvs until the 'Total' row
         r += 1
 
-        while ((values[r][date_col_num] != 'Total') & (values[r][date_col_num] != 'Total MTD')):
-            if len(values[r]) > date_col_num+1:
-                if values[r][date_col_num+1] == 'Total':
+        while True:
+            # Get value in Date column
+            try:
+                value_in_date_col = values[r][date_col_num]
+            except IndexError:
+                value_in_date_col = None
+
+            # Break conditions
+            if value_in_date_col in ['Total', 'Total MTD']:  # Partner tracker
+                break
+            try:
+                if values[r][date_col_num + 1] == 'Total':  # HL tracker
                     break
-            if len(values[r]) < uv_col_num+1:
-                uv = 0
-            else:
+            except IndexError:
+                pass
+            if r >= len(values):
+                break
+            
+            # Get value in UV column
+            try:
                 uv = values[r][uv_col_num]
-            uv_list.append([site, sheet, values[r][date_col_num], uv])
+            except IndexError:  # Not enough elements
+                uv = 0
 
-            r += 1
-            if len(values[r]) == 0:  # If empty row, go next
-                r += 1
+            # If valid, add to data list
+            if value_in_date_col is None:
+                pass
+            else:
+                uv_list.append([site, sheet, value_in_date_col, uv])
 
-        # Sleep to avoid google sheet too-many-requests error
-        time.sleep(1)
+            # Moving on
+            r += 1  # To next row
+            time.sleep(0.1)  # Sleep to avoid google sheet too-many-requests error
 
     uv_df = pd.DataFrame(uv_list, columns=['Site', 'Original Report Tab Name', 'Date', 'UVs'])
     uv_df = uv_df[uv_df['Date'] != '']
@@ -419,8 +436,11 @@ def get_cc_uvs(site, mo_year, cpuv_goals_sheet):
 
     output = pd.DataFrame()
     for gsrange, col in gsrange_col_list:
-        result = service.spreadsheets().values().get(
-            spreadsheetId=spreadsheetId, range=gsrange, valueRenderOption='UNFORMATTED_VALUE').execute()
+        try:
+            result = service.spreadsheets().values().get(
+                spreadsheetId=spreadsheetId, range=gsrange, valueRenderOption='UNFORMATTED_VALUE').execute()
+        except googleapiclient.errors.HttpError:  # Sheet not found. Notify someone, pls.
+            continue
         values = result.get('values', [])
 
         df = pd.DataFrame(values)
