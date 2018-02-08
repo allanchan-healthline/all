@@ -355,19 +355,40 @@ def get_microsite_uvs(site, mo_year, gsheet_file_id, cpuv_goals_sheet, mnt_uv_tr
 
         # Extract date and uvs until the 'Total' row
         r += 1
-        while ((values[r][date_col_num] != 'Total') & (values[r][date_col_num] != 'Total MTD')):
-            if len(values[r]) > date_col_num+1:
-                if values[r][date_col_num+1] == 'Total':
-                    break
-            if len(values[r]) < uv_col_num+1:
-                uv = 0
-            else:
-                uv = values[r][uv_col_num]
-            uv_list.append([site, sheet, values[r][date_col_num], uv])
-            r += 1
 
-        # Sleep to avoid google sheet too-many-requests error
-        time.sleep(1)
+        while True:
+            # Get value in Date column
+            try:
+                value_in_date_col = values[r][date_col_num]
+            except IndexError:
+                value_in_date_col = None
+
+            # Break conditions
+            if value_in_date_col in ['Total', 'Total MTD']:  # Partner tracker
+                break
+            try:
+                if values[r][date_col_num + 1] == 'Total':  # HL tracker
+                    break
+            except IndexError:
+                pass
+            if r >= len(values):
+                break
+            
+            # Get value in UV column
+            try:
+                uv = values[r][uv_col_num]
+            except IndexError:  # Not enough elements
+                uv = 0
+
+            # If valid, add to data list
+            if value_in_date_col is None:
+                pass
+            else:
+                uv_list.append([site, sheet, value_in_date_col, uv])
+
+            # Moving on
+            r += 1  # To next row
+            time.sleep(0.1)  # Sleep to avoid google sheet too-many-requests error
 
     uv_df = pd.DataFrame(uv_list, columns=['Site', 'Original Report Tab Name', 'Date', 'UVs'])
     uv_df = uv_df[uv_df['Date'] != '']
@@ -415,8 +436,11 @@ def get_cc_uvs(site, mo_year, cpuv_goals_sheet):
 
     output = pd.DataFrame()
     for gsrange, col in gsrange_col_list:
-        result = service.spreadsheets().values().get(
-            spreadsheetId=spreadsheetId, range=gsrange, valueRenderOption='UNFORMATTED_VALUE').execute()
+        try:
+            result = service.spreadsheets().values().get(
+                spreadsheetId=spreadsheetId, range=gsrange, valueRenderOption='UNFORMATTED_VALUE').execute()
+        except googleapiclient.errors.HttpError:  # Sheet not found. Notify someone, pls.
+            continue
         values = result.get('values', [])
 
         df = pd.DataFrame(values)
@@ -807,9 +831,8 @@ def allergan_report(start_date, end_date):
 
     # Add Device
     moat_report['Device'] = ''
-    moat_report.loc[moat_report['Placement Label'].str.contains('_De_', case=False), 'Device'] = 'Desktop'
-    moat_report.loc[moat_report['Placement Label'].str.contains('_Ta_', case=False), 'Device'] = 'Tablet'
-    moat_report.loc[moat_report['Placement Label'].str.contains('_Mo_', case=False), 'Device'] = 'Mobile'
+    moat_report.loc[moat_report['Placement Label'].str.contains('_Al_', case=False), 'Device'] = 'Desktop & Tablet'
+    moat_report.loc[moat_report['Placement Label'].str.contains('_MW', case=False), 'Device'] = 'Mobile'
 
     # Add Advertiser
     dict_advertiser = {'AG_2016_FY_Botox CM Branded Display': 'Others',
@@ -823,6 +846,7 @@ def allergan_report(start_date, end_date):
                        'AG_2017_FY_Namzaric Branded Display': 'Namzaric',
                        'AG_2017_FY_Restasis Branded Display': 'Restasis',
                        'AG_2017_FY_Viberzi Display': 'Viberzi',
+                       'AG_2018_FY_BOTOX CM_D_B_DTC_NA': 'Botox',
                        'none': 'Others'}
 
     moat_report['Campaign Label'] = [(campaign_label if isinstance(campaign_label, str) else 'none') for campaign_label
@@ -869,13 +893,13 @@ def allergan_report(start_date, end_date):
     # Create a pivot table
     moat_report = moat_report[(moat_report['Site'] == 'Drugs') | (moat_report['Site'] == 'HL')]
     moat_report = moat_report[['Site', 'Advertiser', 'Device', 'Size', 'Impressions Analyzed',
-                               'On-Screen Measurable Impressions', 'Human and Viewable Impressions',
+                               'On-Screen Measurable Impressions', 'Valid and Viewable Impressions',
                                'GroupM Payable Impressions']]
     pivot = moat_report.groupby(['Site', 'Advertiser', 'Device', 'Size']).sum().reset_index()
 
     # Add Total for each (Site, Advertiser, Device)
     pivot_by_site_adv_device = moat_report[['Site', 'Advertiser', 'Device', 'Impressions Analyzed',
-                                            'On-Screen Measurable Impressions', 'Human and Viewable Impressions',
+                                            'On-Screen Measurable Impressions', 'Valid and Viewable Impressions',
                                             'GroupM Payable Impressions']].groupby(
         ['Site', 'Advertiser', 'Device']).sum().reset_index()
     pivot_by_site_adv_device['Size'] = 'Total'
@@ -883,13 +907,13 @@ def allergan_report(start_date, end_date):
 
     # Add Total for each (Site, Advertiser)
     pivot_by_site_adv = moat_report[['Site', 'Advertiser', 'Impressions Analyzed',
-                                     'On-Screen Measurable Impressions', 'Human and Viewable Impressions',
+                                     'On-Screen Measurable Impressions', 'Valid and Viewable Impressions',
                                      'GroupM Payable Impressions']].groupby(['Site', 'Advertiser']).sum().reset_index()
     pivot_by_site_adv['Device'] = 'Total'
     pivot = pd.concat([pivot, pivot_by_site_adv])
 
     # Add Viewability
-    pivot['Viewability'] = pivot['Human and Viewable Impressions'] / pivot['On-Screen Measurable Impressions']
+    pivot['Viewability'] = pivot['Valid and Viewable Impressions'] / pivot['On-Screen Measurable Impressions']
 
     # Add Viewability To Apply for Mobile
     ## Desktop 300x250 Viewability for Mobile 300x250
@@ -905,7 +929,7 @@ def allergan_report(start_date, end_date):
 
             use_df = pivot[(pivot['Site'] == site) &
                            (pivot['Advertiser'] == adv) &
-                           (pivot['Device'] == 'Desktop') &
+                           (pivot['Device'] == 'Desktop & Tablet') &
                            (pivot['Size'] == use_size)]
 
             if len(use_df) > 0:
@@ -950,7 +974,7 @@ def allergan_report(start_date, end_date):
     pivot['Discrepancy'] = ''
 
     pivot = pivot.sort_values(['Site', 'Advertiser', 'Device', 'Size'])
-    pivot = pivot[['Site', 'Advertiser', 'Device', 'Size', 'Human and Viewable Impressions',
+    pivot = pivot[['Site', 'Advertiser', 'Device', 'Size', 'Valid and Viewable Impressions',
                    'On-Screen Measurable Impressions', 'Viewability', 'Viewability To Apply',
                    'Impressions Analyzed', 'Billable Imps', 'DFP Imps', 'Billability', 'Discrepancy',
                    'GroupM Payable Impressions']]

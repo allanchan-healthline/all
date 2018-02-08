@@ -127,7 +127,7 @@ def make_das(use_scheduled_units=False, export=False):
                   'IO Number', 'Start Date', 'End Date', 'Approval Date', 'Stage', 'Billing Details', 'Customer Billing ID', 'Billing Profile Name',
                   'Opportunity Owner: Full Name',
                   '2nd Opportunity Owner: Full Name', 'Client Services: Full Name', 'Campaign Manager: Full Name', 'Advertiser Vertical',
-                  'Product: Product Name', 'Contracted Sites', 'Contracted Devices', 'Line Item Number', 'OLI', 'Billable Reporting Source',
+                  'Product: Product Name', 'Media Product', 'Contracted Sites', 'Contracted Devices', 'Line Item Number', 'OLI', 'Billable Reporting Source',
                   'Viewability Source', 'Viewability', 'Blocking System', 'Line Description', 'Contracted Sizes', 'Price Calculation Type',
                   'Sales Price', 'Base Rate', 'Baked-In Production Rate', 'Total Price', 'Total Units']
     if use_scheduled_units:
@@ -245,7 +245,7 @@ def get_cpuv_goals(year, sheet):
     uv_goals_df = pd.DataFrame(values[1:])
     uv_goals_df.columns = uv_goals_df.iloc[0]
     uv_goals_df = uv_goals_df[1:].reset_index(drop=True)
-    uv_goals_df = uv_goals_df[[isinstance(cell, str) for cell in uv_goals_df['OLI']]]
+    uv_goals_df = uv_goals_df[[(isinstance(cell, str) and cell.startswith('OLI')) for cell in uv_goals_df['OLI']]]
 
     # Empty cells are in the string type. Convert them to numeric (float).
     for site_goal in ['HL Goal', 'Drugs Goal', 'GoodRx Goal', 'MNT Goal', 'BCO Goal', 'LS Goal', 'EmpowHer Goal']:

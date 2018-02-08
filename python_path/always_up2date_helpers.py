@@ -253,11 +253,17 @@ def label_microsite_uvs(df, mo_year, cpuv_goals_sheet, uv_tracker_rename_dict):
             ###########################################################
             # Calculate paid delivery
             ###########################################################
+            paid_goal_list = cpuv_goals[(cpuv_goals['HL Report Tab Name'] == sheet) &
+                                        (cpuv_goals['Base Rate'] > 0)]['HL Goal'].tolist()
+            av_goal_list = cpuv_goals[(cpuv_goals['HL Report Tab Name'] == sheet) &
+                                      (cpuv_goals['Base Rate'] == 0)]['HL Goal'].tolist()
 
-            paid_goal = cpuv_goals[(cpuv_goals['HL Report Tab Name'] == sheet) &
-                                   (cpuv_goals['Base Rate'] > 0)]['HL Goal'].tolist()[0]
-            av_goal = cpuv_goals[(cpuv_goals['HL Report Tab Name'] == sheet) &
-                                 (cpuv_goals['Base Rate'] == 0)]['HL Goal'].tolist()[0]
+            # Ignore incorrectly entered tab names (on CPUV Goals Sheet)
+            if (len(paid_goal_list) == 0) or (len(av_goal_list) == 0):
+                continue
+  
+            paid_goal = paid_goal_list[0] 
+            av_goal = av_goal_list[0] 
 
             total_delivery = df[df['Report Tab Name'] == sheet]['UVs'].sum() / 2
             if total_delivery >= (paid_goal + av_goal):

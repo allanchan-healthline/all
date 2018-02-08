@@ -70,7 +70,7 @@ def make_bg_as_csv(year, mo):
     das = make_das(use_scheduled_units=False, export=False)
     das_month = str(mo) + '/' + str(year)
     
-    bg = das[das[das_month] > 0]
+    bg = das[das[das_month] != 0]  # Updated to include negative goals. Used to only filter for positive goals.
     bg = bg[bg['Price Calculation Type'] != 'CPA']
 
     ##############################################################
@@ -1422,7 +1422,7 @@ def make_site_report_as_excel(year, mo, prefix4output):
 
     das_1 = das[das[das_month] > 0][['BBR', 'Campaign Name', 'Flight Type', 'Brand', 'Account Name', 'Agency', 'IO Number', 'Start Date', 'End Date',
                                      'Opportunity Owner', '2nd Opportunity Owner', 'Campaign Manager', 'Line Item Number', 'Line Description', 'Price Calculation Type',
-                                     'Sales Price', 'Base Rate', 'Baked-In Production Rate', das_month, 'Customer Billing ID', 'Customer Billing Name']]
+                                     'Sales Price', 'Base Rate', 'Baked-In Production Rate', das_month, 'Customer Billing ID', 'Customer Billing Name', 'Media Product']]
     das_1 = das_1.rename(columns={'Line Description': 'DAS Line Item Name', das_month: 'Total Goal'})
 
     data = data.drop('Price Calculation Type', axis=1)
@@ -1520,7 +1520,7 @@ def make_site_report_as_excel(year, mo, prefix4output):
               'Billed Impressions/UVs', 'Site Goal', 'Adjusted w/ Discrepancy', 'Discrepancy', 'Delivered',
               'Goal Breakdown', 'Total Billable', 'Total Goal', 'Base Rate', 'Gross Site Revenue (Does Not Include Production Fee)',
               'RevShare', 'Net Site Expense', 'Baked-in Production', 'Production Fee', 'Gross Rate',
-              'Gross Revenue (Includes Production Fee)', 'Own/Partner/DSP', 'HL/HW', 'HCP', 'Parent', 'Agency',
+              'Gross Revenue (Includes Production Fee)', 'Media Product', 'Own/Partner/DSP', 'HL/HW', 'HCP', 'Parent', 'Agency',
               'Customer Billing ID', 'Customer Billing Name', 'IO Number', 'Flight Start Date', 'Flight End Date',
               'Sales Contact', 'Billed > Delivered', 'Clicks']
 

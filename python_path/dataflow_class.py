@@ -106,7 +106,9 @@ class MicrositeUVs(DataFlow):
             return True
         elif pickled < last_modified:  # add 1 min extra
             return True
-        return False
+
+        cpuv_goals = CPUV_Goals(self.mo_year)  # Adding this to ensure when CPUV Goals Sheet changes, the pickle gets updated
+        return cpuv_goals.this_has_changed()
 
 class CC_UVs(DataFlow):
     def __init__(self, site, mo_year):
@@ -133,7 +135,9 @@ class CC_UVs(DataFlow):
             return True
         elif pickled < last_modified:  # add 1 min extra
             return True
-        return False
+
+        cpuv_goals = CPUV_Goals(self.mo_year)  # Adding this to ensure when CPUV Goals Sheet changes, the pickle gets updated
+        return cpuv_goals.this_has_changed()
 
 class CPUV_Goals(DataFlow):
     def __init__(self, mo_year):

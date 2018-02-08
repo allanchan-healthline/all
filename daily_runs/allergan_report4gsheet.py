@@ -112,7 +112,7 @@ def make_vf_dict(i_row_start, n_row, i_col_start, n_col, type, pattern):
                                                                            'pattern': pattern}}},
                            'fields': 'userEnteredFormat.numberFormat'}}
 
-value_formatting.append(make_vf_dict(1, n_row - 1, header.index('Human and Viewable Impressions'), 2, 'NUMBER', '###,###,##0'))
+value_formatting.append(make_vf_dict(1, n_row - 1, header.index('Valid and Viewable Impressions'), 2, 'NUMBER', '###,###,##0'))
 value_formatting.append(make_vf_dict(1, n_row - 1, header.index('Viewability'), 2, 'NUMBER', '#0.0%'))
 value_formatting.append(make_vf_dict(1, n_row - 1, header.index('Impressions Analyzed'), 3, 'NUMBER', '###,###,##0'))
 value_formatting.append(make_vf_dict(1, n_row - 1, header.index('Billability'), 2, 'NUMBER', '#0.0%'))
@@ -135,12 +135,10 @@ for i in range(len(summary_values)):
     if i == 0:
         colors += [{'values': [{'userEnteredFormat': {'backgroundColor': grey}}] * n_col}]
     elif summary_values[i][i_size] == 'Total':
-        if summary_values[i][i_device] == 'Desktop':
+        if summary_values[i][i_device] == 'Desktop & Tablet':
             colors += [{'values': [{'userEnteredFormat': {'backgroundColor': green}}] * n_col}]
         elif summary_values[i][i_device] == 'Mobile':
             colors += [{'values': [{'userEnteredFormat': {'backgroundColor': blue}}] * n_col}]
-        elif summary_values[i][i_device] == 'Tablet':
-            colors += [{'values': [{'userEnteredFormat': {'backgroundColor': sky}}] * n_col}]
         else:
             colors += [{'values': [{'userEnteredFormat': {'backgroundColor': grey}}] * n_col}]
     elif summary_values[i][i_device] == 'Total':
