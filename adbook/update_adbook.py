@@ -1,5 +1,5 @@
 import sys
-
+sys.path.append('/home/fouyang/ad-book/python_path')
 from path2pickles import *
 from NEW_helpers import *
 from adbook_helpers import *
@@ -43,10 +43,21 @@ def main(year, mo):
                 'jqui css': 'jquery-ui-1.10.4.custom.min.css',
                 'jqui js': 'jquery-ui-1.10.4.custom.min.js'}
 
+    all_line_items_aggregation = []
+
     for campaign_dict in ab_campaign_dict_list:
-        make_ab_campaign_html(campaign_dict, last_delivery_date, non_html, output_folder_name)
+        make_ab_campaign_html(campaign_dict, last_delivery_date, non_html, output_folder_name, all_line_items_aggregation)
     make_ab_index_html(ab_campaign_dict_list, non_html, output_folder_name)
     make_ab_iframes_html(non_html, output_folder_name)
+
+    lineitems_revenue_aggregation = pd.concat(all_line_items_aggregation).groupby(['Date']).sum()
+    daily_sum = lineitems_revenue_aggregation.sum(axis=1)
+    lineitems_revenue_aggregation['Daily Sum'] = daily_sum
+    aggregation_total = lineitems_revenue_aggregation.sum()
+    aggregation_total = ['Total'] + pd.DataFrame(aggregation_total).transpose().applymap("${:,.2f}".format).values.tolist()[0]
+    lineitems_revenue_aggregation = lineitems_revenue_aggregation.applymap("${:,.2f}".format)
+    lineitems_revenue_aggregation = lineitems_revenue_aggregation.reset_index(drop=False)
+    make_summary_book_html(lineitems_revenue_aggregation, non_html, output_folder_name, aggregation_total)
 
     for key in non_html:
         file = non_html[key]
