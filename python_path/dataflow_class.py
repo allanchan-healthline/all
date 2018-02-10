@@ -17,8 +17,6 @@ class DataFlow():
     DIR_PICKLES = None
     MONTHLY_SHEET_NAME = None
     UV_TRACKER_GSHEET = None
-    MNT_UV_TRACKER_TABS = None
-    UV_TRACKER_RENAME_DICT = None
     LS_CORRECT_RATE_DICT = None
     DRUGS_CORRECT_RATE_LIST = None
     TEMP_FIX_DAS4FLAT_FEE = None
@@ -89,12 +87,10 @@ class MicrositeUVs(DataFlow):
 
     def get_raw_df(self):
         return get_microsite_uvs(self.site, self.mo_year, DataFlow.UV_TRACKER_GSHEET[self.site],
-                                 DataFlow.MONTHLY_SHEET_NAME['cpuv goals'],
-                                 DataFlow.MNT_UV_TRACKER_TABS)
+                                 DataFlow.MONTHLY_SHEET_NAME['cpuv goals'])
 
     def get_labeled_df(self):
-        return label_microsite_uvs(self.get_raw_df(), self.mo_year, DataFlow.MONTHLY_SHEET_NAME['cpuv goals'],
-                                   DataFlow.UV_TRACKER_RENAME_DICT)
+        return label_microsite_uvs(self.get_raw_df(), self.mo_year, DataFlow.MONTHLY_SHEET_NAME['cpuv goals'])
 
     def perform_op(self):
         return self.get_labeled_df()
@@ -166,7 +162,7 @@ class CPUV(DataFlow):
         self.pickle_name = 'cpuv.pickle'
         self.name = 'cpuv'
         self.dependency_list = [CPUV_Goals(self.mo_year)]
-        for site in ['Drugs.com', 'Livestrong', 'EmpowHer', 'HL', 'MNT']:
+        for site in ['Drugs.com', 'Livestrong', 'EmpowHer', 'HL', 'MNT', 'BCO']:
             if site not in DataFlow.UV_TRACKER_GSHEET:
                 continue
             self.dependency_list.append(MicrositeUVs(site, self.mo_year))

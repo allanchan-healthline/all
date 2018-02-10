@@ -5,22 +5,13 @@ MONTHLY_SHEET_NAME = {'pas': 'Feb', 'cpuv goals': 'Feb'}
 
 UV_TRACKER_GSHEET = {'Drugs.com': '1hvstKG-Z85ZQx82aC8ew4beERVEmvSqSZvMzofIyP5U',
                      'HL': '1L2Y_VXmrPV5TkKXoSFyBN8xUVK9BhygEpfkXLsBMYdw',
-                     'MNT': '1L2Y_VXmrPV5TkKXoSFyBN8xUVK9BhygEpfkXLsBMYdw'}
-# Add BCO when there's a tracker (Breastcancer.org)
-
-MNT_UV_TRACKER_TABS = ['Humira AS MNT', 'Humira CD MNT', 'Humira PSA MNT', 'Humira PS MNT',
-                       'Humira RA MNT', 'Livalo MNT']
+                     'MNT': '1L2Y_VXmrPV5TkKXoSFyBN8xUVK9BhygEpfkXLsBMYdw',
+                     'BCO': '1L2Y_VXmrPV5TkKXoSFyBN8xUVK9BhygEpfkXLsBMYdw'}
 
 LS_CORRECT_RATE_DICT = {}
 
 DRUGS_CORRECT_RATE_LIST = [('17-319', 'Toujeo', 'HL D LS m.HL m.D Sponsorship of T2D Microsite', 1.00),
                            ('17-277', 'benralizumab', 'D m.D Brand Championing (Fasenra)', 0.30)]  # Charge Flat-fee, pay CC
-
-UV_TRACKER_RENAME_DICT = {'Medical News Today': {'Humira AS MNT': 'Humira AS',
-                                                 'Humira CD MNT': 'Humira CD',
-                                                 'Humira PSA MNT': 'Humira PsA',
-                                                 'Humira PS MNT': 'Humira PsO',
-                                                 'Humira RA MNT': 'Humira R.A.'}}
 
 def TEMP_FIX_DAS4FLAT_FEE(das):
     das = das.copy()

@@ -279,21 +279,21 @@ def get_dfp_mtd_all(last_delivery_date, path_csv, emailed_csv):
 # UVs
 #####################################################
 
-def get_microsite_uvs(site, mo_year, gsheet_file_id, cpuv_goals_sheet, mnt_uv_tracker_tabs):
+def get_microsite_uvs(site, mo_year, gsheet_file_id, cpuv_goals_sheet):
     cpuv_goals = get_cpuv_goals(mo_year[1], cpuv_goals_sheet)
 
     ###########################################################
     # Make a list of microsite tab names
     ###########################################################
 
-    if site == 'HL':
-        temp_sheets = cpuv_goals['HL Report Tab Name'].drop_duplicates().values.tolist()
+    site2goals_col = {'HL': 'HL Report Tab Name', 'MNT': 'MNT Report Tab Name', 'BCO': 'BCO Report Tab Name'}
+    if site in ['HL', 'MNT', 'BCO']:
+        goals_col = site2goals_col[site]
+        temp_sheets = cpuv_goals[goals_col].drop_duplicates().values.tolist()
         sheets = []
         for temp_sheet in temp_sheets:
             if (temp_sheet is not None) and (temp_sheet != ''):
                 sheets += temp_sheet.split(', ')
-    elif site == 'MNT':
-        sheets = mnt_uv_tracker_tabs
     elif site == 'Drugs.com':
         sheets = []
         for sheet in gsheet_get_sheet_names(gsheet_file_id):
@@ -302,6 +302,8 @@ def get_microsite_uvs(site, mo_year, gsheet_file_id, cpuv_goals_sheet, mnt_uv_tr
             if '(Treatment Seekers)' in sheet:
                 continue
             if '(Treatment Seeker)' in sheet:
+                continue
+            if '(CC)' in sheet:
                 continue
             sheets.append(sheet)
     else:
@@ -312,7 +314,7 @@ def get_microsite_uvs(site, mo_year, gsheet_file_id, cpuv_goals_sheet, mnt_uv_tr
     ###########################################################
 
     date_col_num = 1  # Count starts at 0
-    if site in ['HL', 'MNT']:
+    if site in site2goals_col:
         uv_col_num = 3
     else:
         uv_col_num = 2
@@ -324,6 +326,8 @@ def get_microsite_uvs(site, mo_year, gsheet_file_id, cpuv_goals_sheet, mnt_uv_tr
     uv_list = []  # This will be a list of [site, tab name, date, uvs]
     if site == 'MNT':
         site = 'Medical News Today'
+    elif site == 'BCO':
+        site = 'Breastcancer.org'
 
     service = get_gsheet_service()
 

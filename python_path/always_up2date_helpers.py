@@ -169,9 +169,8 @@ def label_dfp_mtd_all(dfp_mtd_all):
 # CPUV
 ###################################################################
 
-def label_microsite_uvs(df, mo_year, cpuv_goals_sheet, uv_tracker_rename_dict):
+def label_microsite_uvs(df, mo_year, cpuv_goals_sheet):
     """Return a dataframe of microsite uvs labeled with Salesforce info.
-    uv_tracker_rename_dict is from python_path/monthly_setup_yyyy_mm.py
     """
 
     if len(df) == 0:
@@ -190,20 +189,20 @@ def label_microsite_uvs(df, mo_year, cpuv_goals_sheet, uv_tracker_rename_dict):
     df['UVs'] = [(0 if isinstance(uv, str) else int(uv)) for uv in df['UVs']]
 
     ###########################################################
-    # Correct tab name if not the same as the Report Tab Name in the goals sheet
-    ###########################################################
-
-    df['Report Tab Name'] = df['Original Report Tab Name']
-    if site in uv_tracker_rename_dict:
-        tab_rename = uv_tracker_rename_dict[site]
-        for org in tab_rename:
-            df.loc[df['Original Report Tab Name'] == org, 'Report Tab Name'] = tab_rename[org]
-
-    ###########################################################
     # Join with goals sheet
     ###########################################################
+    df['Report Tab Name'] = df['Original Report Tab Name']
 
     if site != 'HL':
+        # Change column name if needed
+        if site == 'Medical News Today':
+            goals_col = 'MNT Report Tab Name'
+        elif site == 'Breastcancer.org':
+            goals_col = 'BCO Report Tab Name'
+        if site in ['Medical News Today', 'Breastcancer.org']:
+            cpuv_goals = cpuv_goals.drop('Report Tab Name', axis=1)
+            cpuv_goals = cpuv_goals.rename(columns={goals_col: 'Report Tab Name'})
+
         df = pd.merge(df, cpuv_goals[['BBR', 'Campaign Name', 'Line Description', 'Base Rate', 'Report Tab Name']],
                       how='left', on='Report Tab Name')
     else:
