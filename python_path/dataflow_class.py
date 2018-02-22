@@ -97,14 +97,16 @@ class MicrositeUVs(DataFlow):
 
     def this_has_changed(self):
         pickled = get_last_modified_local(DataFlow.DIR_PICKLES + '/' + self.pickle_name)
-        last_modified = get_last_modified_gdrive(DataFlow.UV_TRACKER_GSHEET[self.site])
         if pickled is None:
             return True
-        elif pickled < last_modified:  # add 1 min extra
+
+        tracker_last_modified = get_last_modified_gdrive(DataFlow.UV_TRACKER_GSHEET[self.site])
+        goals_last_modified = get_last_modified_gdrive(CPUV_GOALS_WHICH_GSHEET[self.mo_year[1]])
+
+        if (pickled < tracker_last_modified) or (pickled < goals_last_modified):  # add 1 min extra
             return True
 
-        cpuv_goals = CPUV_Goals(self.mo_year)  # Adding this to ensure when CPUV Goals Sheet changes, the pickle gets updated
-        return cpuv_goals.this_has_changed()
+        return False
 
 class CC_UVs(DataFlow):
     def __init__(self, site, mo_year):
@@ -126,14 +128,16 @@ class CC_UVs(DataFlow):
 
     def this_has_changed(self):
         pickled = get_last_modified_local(DataFlow.DIR_PICKLES + '/' + self.pickle_name)
-        last_modified = get_last_modified_gdrive(CC_TRACKER_GSHEET[self.site])
         if pickled is None:
             return True
-        elif pickled < last_modified:  # add 1 min extra
+
+        tracker_last_modified = get_last_modified_gdrive(CC_TRACKER_GSHEET[self.site])
+        goals_last_modified = get_last_modified_gdrive(CPUV_GOALS_WHICH_GSHEET[self.mo_year[1]])
+
+        if (pickled < tracker_last_modified) or (pickled < goals_last_modified):  # add 1 min extra
             return True
 
-        cpuv_goals = CPUV_Goals(self.mo_year)  # Adding this to ensure when CPUV Goals Sheet changes, the pickle gets updated
-        return cpuv_goals.this_has_changed()
+        return False
 
 class CPUV_Goals(DataFlow):
     def __init__(self, mo_year):
