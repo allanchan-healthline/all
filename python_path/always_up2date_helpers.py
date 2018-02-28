@@ -522,16 +522,15 @@ def get_site_goals(mo_year, pas_sheet, cpuv_goals_sheet, ls_correct_rate_dict,
         if col not in cpuv_goals.columns.tolist():
             continue
 
-        cpuv_goals_per_site = cpuv_goals[['BBR', 'Brand', 'Line Description', col, 'Report Tab Name', 'Max at Goal']].rename(columns={col: 'Site Goal'})
+        cpuv_goals_per_site = cpuv_goals[['BBR', 'Brand', 'Line Description', col, 'Report Tab Name']].rename(columns={col: 'Site Goal'})
         if cpuv_col_site_dict[col] == 'HL':
             cpuv_goals_per_site.loc[pd.isnull(cpuv_goals_per_site['Site Goal']), 'Site Goal'] = 0
-            cpuv_goals_per_site['Max at Goal'] = None
         else:
             cpuv_goals_per_site = cpuv_goals_per_site[cpuv_goals_per_site['Site Goal'] > 0]
         cpuv_goals_per_site['Site'] = cpuv_col_site_dict[col]
         cpuv_goals_formatted = cpuv_goals_formatted.append(cpuv_goals_per_site)
 
-    cpuv_goals_formatted = cpuv_goals_formatted.rename(columns={'Line Description': 'DAS Line Item Name', 'Max at Goal': 'Cap CPUV'})
+    cpuv_goals_formatted = cpuv_goals_formatted.rename(columns={'Line Description': 'DAS Line Item Name'})
 
     ###################################################################
     # Combine the two
