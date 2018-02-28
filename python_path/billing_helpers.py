@@ -1,6 +1,7 @@
 from path2pickles import *
 from NEW_helpers import *
 from delivery_helpers import *
+from report_helpers import *
 from always_up2date_helpers import *
 from gsheet_gdrive_api import *
 
@@ -72,6 +73,7 @@ def make_bg_as_csv(year, mo):
     
     bg = das[das[das_month] != 0]  # Updated to include negative goals. Used to only filter for positive goals.
     bg = bg[bg['Price Calculation Type'] != 'CPA']
+    bg['Multi-Month Bill Up To'] = das_multimonth_bill_up2_col(bg, year, mo)
 
     ##############################################################
     # Add Expedited Invoice
@@ -80,38 +82,6 @@ def make_bg_as_csv(year, mo):
     exp_inv = get_expedited_invoice_opportunities()
     exp_inv = exp_inv[['BBR', 'Expedited Invoice']].drop_duplicates()
     bg = pd.merge(bg, exp_inv, how='left', on=['BBR'])
-
-    ##############################################################
-    # Multi-Month Bill Up To
-    ##############################################################
-    
-    das_header = das.columns.tolist()
-    months_list = []
-    for col in das_header:
-        if re.search('[0-9]+/[0-9]{4}', col):
-            months_list.append(col)
-
-    (das_month_mo, das_month_year) = das_month.split('/')
-    das_month_mo = int(das_month_mo)
-    das_month_year = int(das_month_year)
-
-    months = []
-    for month in months_list:
-        (mo, year) = month.split('/')
-        mo = int(mo)
-        year = int(year)
-        if year < das_month_year:
-            continue
-        elif year > das_month_year:
-            months.append(month)
-        elif mo >= das_month_mo:
-                months.append(month)
-
-    for month in months:
-        bg[month].fillna(0, inplace=True)
-
-    bg['Multi-Month Bill Up To'] = bg.apply(lambda row: sum(round(row[month], 0) for month in months), axis=1)
-    bg.loc[bg['Flight Type'] == 'Monthly', 'Multi-Month Bill Up To'] = ''
 
     ##############################################################
     # Rename columns
