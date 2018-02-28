@@ -634,5 +634,29 @@ def gsheet_move_sheet(name, ss_id, new_index=0):
 
     return None
 
+def gsheet_rename_sheet(name, new_name, ss_id):
+    """Rename a sheet name"""
+    service = get_gsheet_service()
 
+    sheet_id = gsheet_get_sheet_id_by_name(name, ss_id)
+    request = [{'updateSheetProperties': {'properties': {'sheetId': sheet_id,
+                                                         'title': new_name},
+                                          'fields': 'title'}}]
+    result = service.spreadsheets().batchUpdate(spreadsheetId=ss_id,
+                                                body={'requests': request}).execute()
+    return None
+
+def gsheet_copy_sheet(copy_sheet_name, as_sheet_name, ss_id):
+    """Copy a sheet with a specified name within a specified Google Sheet spreadsheet."""
+
+    service = get_gsheet_service()
+
+    copy_sheet_id = gsheet_get_sheet_id_by_name(copy_sheet_name, ss_id)
+    requst_body = {'destination_spreadsheet_id': ss_id}
+    result = service.spreadsheets().sheets().copyTo(spreadsheetId=ss_id, sheetId=copy_sheet_id, body=requst_body).execute()
+
+    gsheet_rename_sheet('Copy of ' + copy_sheet_name, as_sheet_name, ss_id)
+    gsheet_move_sheet(as_sheet_name, ss_id)
+
+    return None
 
