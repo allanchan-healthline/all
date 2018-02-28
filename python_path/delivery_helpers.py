@@ -605,7 +605,7 @@ def dcm_reporting(start_date, end_date):
     j = 1
     while len(profiles_df[profiles_df['report_downloaded'] == False]) > 0:
         if j >= 20:
-            print('Not al files were downloaded.')
+            print('Not all files were downloaded.')
             break
 
         time.sleep(5)

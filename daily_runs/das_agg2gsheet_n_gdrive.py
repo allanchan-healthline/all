@@ -16,8 +16,6 @@ def main(year, mo):
         all1 = pickle.load(f)
     with open(DIR_PICKLES + '/' + 'site_goals.pickle', 'rb') as f:
         site_goals = pickle.load(f)
-    with open(DIR_PICKLES + '/' + 'partner_capping_sp_case.pickle', 'rb') as f:
-        partner_capping_sp_case = pickle.load(f)
     with open(DIR_PICKLES + '/' + 'add_special_case.pickle', 'rb') as f:
         add_special_case = pickle.load(f)
 
@@ -25,7 +23,7 @@ def main(year, mo):
     # Main
     ############################################################################
 
-    daily_site_report = get_daily_site_report(all1, site_goals, partner_capping_sp_case)
+    daily_site_report = get_daily_site_report(all1, site_goals)
     das_aggregated_dict = get_das_aggregated_dict(daily_site_report, add_special_case)
 
     up_das_agg2gsheet(das_aggregated_dict)

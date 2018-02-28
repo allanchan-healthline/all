@@ -17,8 +17,6 @@ def main(year, mo):
         all1 = pickle.load(f)
     with open(DIR_PICKLES + '/' + 'site_goals.pickle', 'rb') as f:
         site_goals = pickle.load(f)
-    with open(DIR_PICKLES + '/' + 'partner_capping_sp_case.pickle', 'rb') as f:
-        partner_capping_sp_case = pickle.load(f)
 
     ############################################################################
     # Main
@@ -26,8 +24,8 @@ def main(year, mo):
 
     now = datetime.now()
 
-    partner_revenue_report = get_partner_revenue_report(all1, site_goals)
-    daily_site_report = get_daily_site_report(all1, site_goals, partner_capping_sp_case)
+    daily_site_report = get_daily_site_report(all1, site_goals)
+    partner_revenue_report = get_partner_revenue_report(all1, site_goals, daily_site_report)
     partner_revrep_check = get_partner_revrep_check(daily_site_report)
 
     partner_revrep2gdrive_dict = {}

@@ -18,7 +18,7 @@ cd $DIR
 CURRENT_MONTH=`date "+%Y_%m"`
 PREVIOUS_MONTH=`date -d "- 1 month" "+%Y_%m"`
 
-for YEAR_MO in ${PREVIOUS_MONTH} ${CURRENT_MONTH} 
+for YEAR_MO in ${CURRENT_MONTH} ${PREVIOUS_MONTH} 
 do
     echo "[`date '+%Y-%m-%d %H:%M:%S.%s'`] For loop YEAR_MO=${YEAR_MO} Start" >> $STATUS
     RUNNING="running_$YEAR_MO"

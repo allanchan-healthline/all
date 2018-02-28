@@ -161,10 +161,6 @@ def get_mtd_per_pl_delivery(all1, site_goals, clicks=False):
     
     return get_grouped_delivery(all1, site_goals, ['BBR', 'Brand', 'DAS Line Item Name'], clicks)
 
-def get_mtd_per_pl_st_delivery(all1, site_goals, clicks=False):
-    
-    return get_grouped_delivery(all1, site_goals, ['BBR', 'Brand', 'DAS Line Item Name', 'Site'], clicks)
-
 def get_daily_per_pl_delivery(all1, site_goals, clicks=False):
     
     return get_grouped_delivery(all1, site_goals, ['BBR', 'Brand', 'DAS Line Item Name', 'Date'], clicks)
@@ -173,170 +169,12 @@ def get_daily_per_pl_st_delivery(all1, site_goals, clicks=False):
 
     return get_grouped_delivery(all1, site_goals, ['BBR', 'Brand', 'DAS Line Item Name', 'Site', 'Date'], clicks)
 
-
-###################################################################
-# Add billable
-###################################################################
-
-def das_multimonth_bill_up2_col(das, year, mo):
-    das = das.copy()
-    das_header = das.columns.tolist()
-    month_list = []
-    for col in das_header:
-        if re.search('[0-9]+/[0-9]{4}', col):
-            month_list.append(col)
-
-    months2add = []
-    for month in month_list:
-        (mo_, year_) = month.split('/')
-        mo_ = int(mo_)
-        year_ = int(year_)
-        if year_ < year:
-            continue
-        elif year_ > year:
-            months2add.append(month)
-        elif mo_ >= mo:
-                months2add.append(month)
-
-    for month in months2add:
-        das[month].fillna(0, inplace=True)
-
-    das['Multi-Month Bill Up To'] = das.apply(lambda row: sum(round(row[month], 0) for month in months2add), axis=1)
-    das.loc[das['Flight Type'] == 'Monthly', 'Multi-Month Bill Up To'] = ''
-
-    return das['Multi-Month Bill Up To']
-
-def das_max_billable_col(das, year, mo):
-    das = das.copy()
-    das['Multi-Month Bill Up To'] = das_multimonth_bill_up2_col(das, year, mo)
-    month = str(mo) + '/' + str(year)
-
-    def get_max_billable(row):
-        if row['Price Calculation Type'] == 'Flat-fee':
-            return row[month]
-        if row['Flight Type'] == 'Monthly':
-            return row[month]
-        plus10per = round(row[month] * 1.1, 0)
-        return min(plus10per, row['Multi-Month Bill Up To'])
-
-    das['Max Billable'] = das.apply(lambda row: get_max_billable(row), axis=1)
-
-    return das['Max Billable']
-
-def add_billable_per_pl(per_pl, year, mo):
-    # Add per_pl['Billable']
-
-    das = make_das(use_scheduled_units=False, export=False)
-    das = das[das[str(mo) + '/' + str(year)] > 0]
-    das['Max Billable'] = das_max_billable_col(das, year, mo)
-    das = das.rename(columns={'Line Description': 'DAS Line Item Name'})
-
-    per_pl_col = per_pl.columns.tolist()
-    join_on = ['BBR', 'Brand', 'DAS Line Item Name']
-    per_pl = pd.merge(per_pl, das, how='left', on=join_on)
-    
-    per_pl['Billable'] = per_pl[['Adjusted w/ Discrepancy', 'Max Billable']].min(axis=1)
-
-    return per_pl[per_pl_col + ['Billable']]
-
-def add_billable_per_pl_st(per_pl_st, per_pl, site_goals):
-    # Loops through per_pl to add per_pl_st['Billable']
-
-    # Add goal to per_pl_st
-    per_pl_st_col = per_pl_st.columns.tolist()
-    join_on = ['BBR', 'Brand', 'DAS Line Item Name', 'Site']
-    per_pl_st = pd.merge(per_pl_st, site_goals[join_on + ['Site Goal', 'Price Calculation Type']], how='left', on=join_on)
-
-    per_pl_st['Billable'] = 0
-    lst = per_pl[['BBR', 'Brand', 'DAS Line Item Name', 'Billable']].values.tolist()
-    for bbr, brand, lin, billable in lst:
-        df = per_pl_st[(per_pl_st['BBR'] == bbr) & 
-                       (per_pl_st['Brand'] == brand) & 
-                       (per_pl_st['DAS Line Item Name'] == lin)]
-        ptype = df['Price Calculation Type'].values.tolist()[0]
-
-        # Dict of {site1: delivery1, site2: delivery2, ...}
-        site2deliv = pd.Series(df['Adjusted w/ Discrepancy'].values, index=df['Site']).to_dict()
-        site2goal = pd.Series(df['Site Goal'].values, index=df['Site']).to_dict()
-        site2bill = {}
-
-        if sum(site2deliv.values()) <= billable:  # All delivery is billable
-            site2bill = site2deliv
-
-        elif len(site2deliv) == 1:  # Only one site
-            for site in site2deliv:
-                site2bill[site] = billable
-
-        else:
-            # 1. Cap partners at goals, except for Drugs CPUV Non-CC
-            for site in site2deliv:
-                if site in ['HL', 'Medical News Today']:
-                    continue
-                if (site == 'Drugs.com') and (ptype == 'CPUV') and ('competitive conquesting' not in lin.lower()):
-                    site2bill[site] = min(site2deliv[site], billable)
-                else:
-                    site2bill[site] = min(site2deliv[site], site2goal[site])
-
-            left = billable - sum(site2bill.values())
-
-            # 2. Max MNT
-            if 'Medical News Today' in site2deliv:
-                site2bill['Medical News Today'] = min(site2deliv['Medical News Today'], left)
-            left = billable - sum(site2bill.values())
-
-            # 3. Max HL
-            if 'HL' in site2deliv:
-                site2bill['HL'] = min(site2deliv['HL'], left)
-            left = billable - sum(site2bill.values())
-
-            # 4. If more billable is left, allocate to lower revshare site first
-            if left > 0:
-                if (ptype == 'CPUV') and ('competitive conquesting' in lin.lower()):
-                    site_order = ['Drugs.com', 'GoodRx', 'Breastcancer.org']
-                else:
-                    site_order = ['GoodRx', 'Breastcancer.org', 'Drugs.com']
-
-                for site in site_order: 
-                    if site in site2deliv:
-                        site2bill[site] = min(site2deliv[site], site2goal[site] + left)
-                        left = billable - sum(site2bill.values())
-
-        # Dump into Billable
-        for site, bill in site2bill.items():
-            per_pl_st.loc[(per_pl_st['BBR'] == bbr) &
-                          (per_pl_st['Brand'] == brand) &
-                          (per_pl_st['DAS Line Item Name'] == lin) &
-                          (per_pl_st['Site'] == site)
-                          , 'Billable'] = bill
-
-    return per_pl_st[per_pl_st_col + ['Billable']]
-
-def add_billable_per_st_day(per_st_day, per_pl_st):
-    # Loops through per_pl_st to add per_st_day['Billable']
-
-    to_concat = []
-    lst = per_pl_st[['BBR', 'Brand', 'DAS Line Item Name', 'Site', 'Billable']].values.tolist()
-    for bbr, brand, lin, site, billable in lst:
-        df = per_st_day[(per_st_day['BBR'] == bbr) & 
-                        (per_st_day['Brand'] == brand) & 
-                        (per_st_day['DAS Line Item Name'] == lin) &
-                        (per_st_day['Site'] == site)]
-
-        df = df.sort_values('Date')  # Sort by date
-        df_plus_billable = cap_delivery(df, billable, 'Adjusted w/ Discrepancy') 
-        to_concat.append(df_plus_billable)
-
-    per_st_day = pd.concat(to_concat)
-    per_st_day = per_st_day.rename(columns={'Capped Adjusted w/ Discrepancy': 'Billable'})
-
-    return per_st_day
-
 ###################################################################
 # Daily Site Report
 ###################################################################
 
-def get_daily_site_report(all1, site_goals):
-   
+def get_daily_site_report(all1, site_goals, partner_capping_sp_case):
+    
     ###################################################################
     # 0. Prep
     ###################################################################
@@ -349,29 +187,240 @@ def get_daily_site_report(all1, site_goals):
     das = make_das(use_scheduled_units=False, export=False)
     das_thismonth = das[(das[das_month] > 0) & (das['Campaign Manager'] != 'SEM')].rename(
         columns={'Line Description': 'DAS Line Item Name',
+                 das_month: 'Goal',
                  'Price Calculation Type': 'DAS Price Calculation Type'})
 
-    header_pl = ['BBR', 'Brand', 'DAS Line Item Name']    
-    header_st = ['BBR', 'Brand', 'DAS Line Item Name', 'Site']    
+    # Special Case Toujeo for Drugs CC
+    #das_thismonth.loc[das_thismonth['Brand'] == 'Toujeo', 'DAS Price Calculation Type'] = 'Flat-fee'
 
     ###################################################################
-    # 1. Daily delivery & billable per placement & site
+    # 1. Overall: Delivery & Estimated 3rd party imps
     ###################################################################
 
-    # Grouped delivery
     per_pl = get_mtd_per_pl_delivery(all1, site_goals)
-    per_pl_st = get_mtd_per_pl_st_delivery(all1, site_goals)
+
+    ###################################################################
+    # 3. Overall: Billable imps
+    ###################################################################
+
+    header_pl = ['BBR', 'Brand', 'DAS Line Item Name']
+    goal = das_thismonth[header_pl + ['Goal', 'DAS Price Calculation Type', 'Flight Type']]
+    per_pl = pd.merge(per_pl, goal, how='left', on=header_pl)
+
+    def calculate_billable(row):
+        if row['DAS Price Calculation Type'] == 'Flat-fee':
+            return row['Adjusted w/ Discrepancy']
+
+        goal = row['Goal']
+        if isinstance(row['Flight Type'], str):
+            if 'Multi-Month' in row['Flight Type']:
+                goal = int(row['Goal'] * 1.1)
+
+        if row['Adjusted w/ Discrepancy'] > goal:
+            return goal
+        else:
+            return row['Adjusted w/ Discrepancy']
+
+    per_pl['Billable'] = per_pl.apply(lambda row: calculate_billable(row), axis=1)
+
+    ###################################################################
+    # 4. Site-specific: Estimate 3rd party imps
+    ###################################################################
+    
+    header_st = ['BBR', 'Brand', 'DAS Line Item Name', 'Site']
+    header_st_day = ['BBR', 'Brand', 'DAS Line Item Name', 'Site', 'Date']
     per_st_day = get_daily_per_pl_st_delivery(all1, site_goals, clicks=True)
 
-    # Add billable
-    per_pl = add_billable_per_pl(per_pl, year, mo)  # per_pl['Billable']
-    per_pl_st = add_billable_per_pl_st(per_pl_st, per_pl, site_goals)  # per_pl_st['Billable']
-    per_st_day = add_billable_per_st_day(per_st_day, per_pl_st)  # per_st_day['Billable']
+    ###################################################################
+    # 5. Overall: HW site count, HW adjusted, MNT adjusted, HL adjusted
+    ###################################################################
+    
+    hw_site_count = per_st_day[(per_st_day['Site'] != 'HL') & (per_st_day['Site'] != 'Medical News Today')][
+        header_st].drop_duplicates().groupby(header_pl).size().reset_index().rename(columns={0: 'HW Site Count'})
+    per_pl = pd.merge(per_pl, hw_site_count, how='left', on=header_pl)
+    per_pl.loc[pd.isnull(per_pl['HW Site Count']), 'HW Site Count'] = 0
+
+    adjusted_by_group = per_st_day[header_st + ['Adjusted w/ Discrepancy']]
+    adjusted_by_group.loc[
+        (adjusted_by_group['Site'] != 'HL') & (adjusted_by_group['Site'] != 'Medical News Today'), 'Site'] = 'HW'
+    adjusted_by_group = pd.pivot_table(data=adjusted_by_group, values='Adjusted w/ Discrepancy',
+                                       index=header_pl, columns=['Site'], aggfunc=np.sum, fill_value=0).reset_index()
+    per_pl = pd.merge(per_pl, adjusted_by_group, how='left', on=header_pl)
+    per_pl = per_pl.rename(columns={'HL': 'Adjusted HL', 'HW': 'Adjusted HW', 'Medical News Today': 'Adjusted MNT'})
 
     ###################################################################
-    # 2. Revenue and Expense
+    # 6. HW Billable
+    # If HW partners count = 1 and (overall billable) < (hw adjusted),
+    # then cap that partner's adjusted delivery
+    # Otherwise pay partners for all delivery
     ###################################################################
 
+    temp = per_pl[(per_pl['HW Site Count'] == 1) & (per_pl['Billable'] < per_pl['Adjusted HW'])]
+    if (len(temp) > 0) or (len(partner_capping_sp_case) > 0):
+        to_add_hwbillable = pd.DataFrame()
+        for i in range(len(temp)):
+            to_cap = temp.iloc[i]
+            delivery = per_st_day[(per_st_day['Site'] != 'HL') & (per_st_day['Site'] != 'Medical News Today') &
+                                  (per_st_day['BBR'] == to_cap['BBR']) &
+                                  (per_st_day['Brand'] == to_cap['Brand']) &
+                                  (per_st_day['DAS Line Item Name'] == to_cap['DAS Line Item Name'])]
+            site = delivery['Site'].drop_duplicates().tolist()[0]
+            billable = to_cap['Billable']
+
+            is_special_case = False
+            for j in range(len(partner_capping_sp_case)):
+                sp_site, sp_bbr, sp_brand, sp_lin, sp_billable = partner_capping_sp_case[j]
+                if (site == sp_site) and (to_cap['BBR'] == sp_bbr) and \
+                        (to_cap['Brand'] == sp_brand) and (to_cap['DAS Line Item Name'] == sp_lin):
+                    is_special_case = True
+                    break
+            if is_special_case:
+                continue
+
+            delivery = delivery[header_st_day + ['Adjusted w/ Discrepancy']].sort_values('Date')
+            delivery = cap_delivery(delivery, billable, 'Adjusted w/ Discrepancy')
+            to_add_hwbillable = pd.concat([to_add_hwbillable, delivery])
+
+        for i in range(len(partner_capping_sp_case)):
+            site, bbr, brand, lin, billable = partner_capping_sp_case[i]
+            delivery = per_st_day[(per_st_day['Site'] == site) &
+                                  (per_st_day['BBR'] == bbr) &
+                                  (per_st_day['Brand'] == brand) &
+                                  (per_st_day['DAS Line Item Name'] == lin)]
+            if len(delivery) == 0:
+                continue
+
+            delivery = delivery[header_st_day + ['Adjusted w/ Discrepancy']].sort_values('Date')
+            delivery = cap_delivery(delivery, billable, 'Adjusted w/ Discrepancy')
+            to_add_hwbillable = pd.concat([to_add_hwbillable, delivery])
+       
+        to_add_hwbillable = to_add_hwbillable.rename(columns={'Capped Adjusted w/ Discrepancy': 'Billable'}). \
+            drop('Adjusted w/ Discrepancy', axis=1)
+        per_st_day = pd.merge(per_st_day, to_add_hwbillable, how='left', on=header_st_day)
+        per_st_day.loc[(per_st_day['Site'] != 'HL') & (per_st_day['Site'] != 'Medical News Today') & (
+            pd.isnull(per_st_day['Billable'])), 'Billable'] = \
+            per_st_day.loc[(per_st_day['Site'] != 'HL') & (per_st_day['Site'] != 'Medical News Today') & (
+                pd.isnull(per_st_day['Billable'])), 'Adjusted w/ Discrepancy']
+
+        hw_billable = per_st_day[(per_st_day['Site'] != 'HL') & (per_st_day['Site'] != 'Medical News Today')][
+            header_pl + ['Billable']].rename(columns={'Billable': 'Billable HW'}).groupby(header_pl).sum().reset_index()
+        per_pl = pd.merge(per_pl, hw_billable, how='left', on=header_pl)
+        per_pl.loc[pd.isnull(per_pl['Billable HW']), 'Billable HW'] = per_pl.loc[
+            pd.isnull(per_pl['Billable HW']), 'Adjusted HW']
+    else:
+        per_st_day.loc[(per_st_day['Site'] != 'HL') & (per_st_day['Site'] != 'Medical News Today'), 'Billable'] = \
+            per_st_day.loc[
+                (per_st_day['Site'] != 'HL') & (per_st_day['Site'] != 'Medical News Today'), 'Adjusted w/ Discrepancy']
+        per_pl['Billable HW'] = per_pl['Adjusted HW']
+
+    ###################################################################
+    # 7. MNT Billable
+    # If (HW partners billable + MNT adjusted) > (overall billable),
+    # then cap MNT adjusted delivery
+    ###################################################################
+    
+    per_pl['Billable HW + Adjusted MNT'] = per_pl['Billable HW'] + per_pl['Adjusted MNT']
+
+    temp = per_pl[per_pl['Billable HW + Adjusted MNT'] > per_pl['Billable']]
+    if len(temp) > 0:
+        to_add_mntbillable = pd.DataFrame()
+        for i in range(len(temp)):
+            to_cap = temp.iloc[i]
+            mnt_cap = to_cap['Billable'] - to_cap['Billable HW']
+            if mnt_cap < 0:
+                mnt_cap = 0
+            delivery = per_st_day[(per_st_day['Site'] == 'Medical News Today') &
+                                  (per_st_day['BBR'] == to_cap['BBR']) &
+                                  (per_st_day['Brand'] == to_cap['Brand']) &
+                                  (per_st_day['DAS Line Item Name'] == to_cap['DAS Line Item Name'])]
+            delivery = delivery[header_st_day + ['Adjusted w/ Discrepancy']].sort_values('Date')
+            delivery = cap_delivery(delivery, mnt_cap, 'Adjusted w/ Discrepancy')
+            to_add_mntbillable = pd.concat([to_add_mntbillable, delivery])
+
+        to_add_mntbillable = to_add_mntbillable.drop('Adjusted w/ Discrepancy', axis=1)
+        per_st_day = pd.merge(per_st_day, to_add_mntbillable, how='left', on=header_st_day)
+        per_st_day.loc[per_st_day['Site'] == 'Medical News Today', 'Billable'] = per_st_day.loc[
+            per_st_day['Site'] == 'Medical News Today', 'Capped Adjusted w/ Discrepancy']
+        per_st_day = per_st_day.drop('Capped Adjusted w/ Discrepancy', axis=1)
+
+        per_st_day.loc[(per_st_day['Site'] == 'Medical News Today') & (pd.isnull(per_st_day['Billable'])), 'Billable'] = \
+            per_st_day.loc[(per_st_day['Site'] == 'Medical News Today') & (
+                pd.isnull(per_st_day['Billable'])), 'Adjusted w/ Discrepancy']
+
+        mnt_billable = per_st_day[per_st_day['Site'] == 'Medical News Today'][header_pl + ['Billable']].rename(
+            columns={'Billable': 'Billable MNT'}).groupby(header_pl).sum().reset_index()
+        per_pl = pd.merge(per_pl, mnt_billable, how='left', on=header_pl)
+        per_pl.loc[pd.isnull(per_pl['Billable MNT']), 'Billable MNT'] = per_pl.loc[
+            pd.isnull(per_pl['Billable MNT']), 'Adjusted MNT']
+    else:
+        per_st_day.loc[per_st_day['Site'] == 'Medical News Today', 'Billable'] = per_st_day.loc[
+            per_st_day['Site'] == 'Medical News Today', 'Adjusted w/ Discrepancy']
+        per_pl['Billable MNT'] = per_pl['Adjusted MNT']
+
+    ###################################################################
+    # 8. HL Billable = Leftover
+    ###################################################################
+    
+    per_pl['Billable HW + Billable MNT + Adjusted HL'] = per_pl['Billable HW'] + per_pl['Billable MNT'] + per_pl[
+        'Adjusted HL']
+
+    temp = per_pl[per_pl['Billable HW + Billable MNT + Adjusted HL'] > per_pl['Billable']]
+    if len(temp) > 0:
+        to_add_hlbillable = pd.DataFrame()
+        for i in range(len(temp)):
+            to_cap = temp.iloc[i]
+            hl_cap = to_cap['Billable'] - to_cap['Billable HW'] - to_cap['Billable MNT']
+            delivery = per_st_day[(per_st_day['Site'] == 'HL') &
+                                  (per_st_day['BBR'] == to_cap['BBR']) &
+                                  (per_st_day['Brand'] == to_cap['Brand']) &
+                                  (per_st_day['DAS Line Item Name'] == to_cap['DAS Line Item Name'])]
+            delivery = delivery[header_st_day + ['Adjusted w/ Discrepancy']].sort_values('Date')
+            if hl_cap < 0:
+                if len(delivery) == 0:
+                    delivery = per_st_day[(per_st_day['BBR'] == to_cap['BBR']) &
+                                          (per_st_day['Brand'] == to_cap['Brand']) &
+                                          (per_st_day['DAS Line Item Name'] == to_cap['DAS Line Item Name'])]
+                    delivery = delivery.drop_duplicates(['BBR', 'Brand', 'DAS Line Item Name', 'Date'])
+                    delivery['Site'] = 'HL'
+                    delivery['Delivered'] = 0
+                    delivery['MTD Disc'] = 0
+                    delivery['Adjusted w/ Discrepancy'] = 0
+                    per_st_day = pd.concat([per_st_day, delivery])
+
+                    delivery = delivery[header_st_day]
+                    minus_per_day = int(hl_cap / len(delivery))
+                    delivery['Capped Adjusted w/ Discrepancy'] = minus_per_day
+                else:
+                    minus_per_day = int(hl_cap / len(delivery))
+                    delivery['Capped Adjusted w/ Discrepancy'] = minus_per_day
+            else:
+                delivery = cap_delivery(delivery, hl_cap, 'Adjusted w/ Discrepancy')
+            to_add_hlbillable = pd.concat([to_add_hlbillable, delivery])
+
+        to_add_hlbillable = to_add_hlbillable.drop('Adjusted w/ Discrepancy', axis=1)
+        per_st_day = pd.merge(per_st_day, to_add_hlbillable, how='left', on=header_st_day)
+        per_st_day.loc[per_st_day['Site'] == 'HL', 'Billable'] = per_st_day.loc[
+            per_st_day['Site'] == 'HL', 'Capped Adjusted w/ Discrepancy']
+        per_st_day = per_st_day.drop('Capped Adjusted w/ Discrepancy', axis=1)
+
+        per_st_day.loc[(per_st_day['Site'] == 'HL') & (pd.isnull(per_st_day['Billable'])), 'Billable'] = \
+            per_st_day.loc[
+                (per_st_day['Site'] == 'HL') & (pd.isnull(per_st_day['Billable'])), 'Adjusted w/ Discrepancy']
+
+        hl_billable = per_st_day[per_st_day['Site'] == 'HL'][header_pl + ['Billable']].rename(
+            columns={'Billable': 'Billable HL'}).groupby(header_pl).sum().reset_index()
+        per_pl = pd.merge(per_pl, hl_billable, how='left', on=header_pl)
+        per_pl.loc[pd.isnull(per_pl['Billable HL']), 'Billable HL'] = per_pl.loc[
+            pd.isnull(per_pl['Billable HL']), 'Adjusted HL']
+    else:
+        per_st_day.loc[per_st_day['Site'] == 'HL', 'Billable'] = per_st_day.loc[
+            per_st_day['Site'] == 'HL', 'Adjusted w/ Discrepancy']
+        per_pl['Billable HL'] = per_pl['Adjusted HL']
+
+    ###################################################################
+    # 9. Revenue and Expense
+    ###################################################################
+    
     per_st_day = pd.merge(per_st_day, site_goals[
         ['BBR', 'Brand', 'DAS Line Item Name', 'Site', 'Base Rate', 'Baked-In Production Rate', 'Site Rate',
          'Price Calculation Type']], how='left', on=header_st)
@@ -396,7 +445,7 @@ def get_daily_site_report(all1, site_goals):
     per_st_day['Expense + Prod. Fee'] = per_st_day['Expense'] + per_st_day['Prod. Fee']
 
     ###################################################################
-    # 3. Flat-fee
+    # 10. Flat-fee
     ###################################################################
 
     def daily_flatfee(das_month):
@@ -446,7 +495,7 @@ def get_daily_site_report(all1, site_goals):
     per_st_day.loc[pd.isnull(per_st_day['DAS Price Calculation Type']), 'DAS Price Calculation Type'] = 'No Goal'
 
     ###################################################################
-    # 4. Delivery with no goal
+    # 11. Delivery with no goal
     ###################################################################
 
     per_st_day.loc[pd.isnull(per_st_day['Price Calculation Type']), 'Price Calculation Type'] = 'No Goal'
@@ -456,13 +505,13 @@ def get_daily_site_report(all1, site_goals):
         per_st_day.loc[per_st_day['Price Calculation Type'] == 'No Goal', col] = 0
 
     ###################################################################
-    # 5. Site Group
+    # Add Site Group
     ###################################################################
 
     per_st_day['Site Group'] = per_st_day['Site'].apply(get_site_group)
 
     ###################################################################
-    # 6. Clean up
+    # 12. Sort and bye!
     ###################################################################
 
     per_st_day = per_st_day[['DAS Price Calculation Type', 'Price Calculation Type',
@@ -1274,42 +1323,71 @@ def up_nr2gdrive(nr2gdrive_dict):
 # Partner Revenue Report
 ###################################################################
 
-def get_partner_revenue_report(all1, site_goals, daily_sr):
+def get_partner_revenue_report(all1, site_goals):
 
     ##########################################################################
-    # CPM
+    # Prep
     ##########################################################################
 
-    cpm = all1[(all1['Site'] != 'HL') &
-               (all1['Site'] != 'Medical News Today') &
-               (all1['Price Calculation Type'] == 'CPM') &
-               (all1['Impressions/UVs'] > 0) &
-               (pd.notnull(all1['Impressions/UVs']))]
+    df = all1[(all1['Site'] != 'HL') & (all1['Site'] != 'Medical News Today') &
+              ((all1['Price Calculation Type'] == 'CPM') | (all1['Price Calculation Type'] == 'CPUV')) &
+              (all1['Impressions/UVs'] > 0) & (pd.notnull(all1['Impressions/UVs']))]
 
-    cpm.loc[pd.isnull(cpm['Clicks']), 'Clicks'] = 0
-    cpm = cpm.rename(columns={'(DAS)BBR #': 'BBR'})
+    df.loc[(df['Price Calculation Type'] == 'CPM') & (pd.isnull(df['Clicks'])), 'Clicks'] = 0
+    df.loc[df['Price Calculation Type'] == 'CPUV', 'Creative size'] = 'temp'  # To be replaced with None later
 
-    groupby_col = ['Site', 'Price Calculation Type', 'BBR', 'Brand', 'DAS Line Item Name', 
+    groupby_col = ['Site', 'Price Calculation Type', '(DAS)BBR #', 'Brand', 'DAS Line Item Name', 
                    'Creative size', 'Date']
     values_col = ['Impressions/UVs', 'Clicks']
-    cpm = cpm[groupby_col + values_col].groupby(groupby_col).sum().reset_index()
+    df = df[groupby_col + values_col].groupby(groupby_col).sum().reset_index()
     
-    ##########################################################################
-    # CPUV 
-    ##########################################################################
-
-    cpuv = daily_sr[(daily_sr['Site'] != 'HL') &
-                    (daily_sr['Site'] != 'Medical News Today') &
-                    (daily_sr['Price Calculation Type'] == 'CPUV')]
-
-    col = ['Site', 'Price Calculation Type', 'BBR', 'Brand', 'DAS Line Item Name', 'Date', 'Billable']
-    cpuv = cpuv[col].rename(columns={'Billable': 'Impressions/UVs'})
-
-    ##########################################################################
-    # Combine CPM and CPUV, and add rate and MTD disc
-    ##########################################################################
-    df = pd.concat([cpm, cpuv])
+    df = df.rename(columns={'(DAS)BBR #': 'BBR'})
+    
     df['Date'] = pd.to_datetime(df['Date'])
+
+    ##########################################################################
+    # Cap CPUV delivery if needed (All excelp Drugs.com Microsite)
+    ##########################################################################
+
+    cap_cpuv_list = site_goals[(site_goals['Price Calculation Type'] == 'CPUV') & 
+                               -((site_goals['Site'] == 'Drugs.com') & -(site_goals['DAS Line Item Name'].str.contains('Competitive Conquesting')))]
+
+    all_capped_delivery = pd.DataFrame()
+    for i in range(len(cap_cpuv_list)):
+        cap_cpuv = cap_cpuv_list.iloc[i]
+        site = cap_cpuv['Site']
+        bbr = cap_cpuv['BBR']
+        brand = cap_cpuv['Brand']
+        lin = cap_cpuv['DAS Line Item Name']
+
+        if ('Competitive Conquesting' in cap_cpuv['DAS Line Item Name']) and isinstance(cap_cpuv['Flight Type'], str) and ('Multi-Month' in cap_cpuv['Flight Type']):
+            cap = round(cap_cpuv['Site Goal'] * 1.1, 0)
+        else:
+            cap = cap_cpuv['Site Goal']
+
+        delivery = df[(df['Site'] == site) & (df['BBR'] == bbr) & (df['Brand'] == brand) &
+                      (df['DAS Line Item Name'] == lin)]
+
+        if len(delivery) < 1:
+            continue
+
+        col = ['Site', 'BBR', 'Brand', 'DAS Line Item Name', 'Date', 'Impressions/UVs']
+        delivery = delivery[col].sort_values('Date')
+        capped_delivery = cap_delivery(delivery, cap, 'Impressions/UVs')
+
+        all_capped_delivery = pd.concat([all_capped_delivery, capped_delivery])
+
+    if len(all_capped_delivery) > 0:
+        all_capped_delivery = all_capped_delivery.drop('Impressions/UVs', axis=1)
+        join_on = ['Site', 'BBR', 'Brand', 'DAS Line Item Name', 'Date']
+        df = pd.merge(df, all_capped_delivery, how='left', on=join_on)
+
+        df.loc[pd.notnull(df['Capped Impressions/UVs']), 'Impressions/UVs'] = df.loc[
+            pd.notnull(df['Capped Impressions/UVs']), 'Capped Impressions/UVs']
+
+    ##########################################################################
+    # Add rate and MTD disc
+    ##########################################################################
 
     join_on = ['Site', 'BBR', 'Brand', 'DAS Line Item Name']
     df = pd.merge(df, site_goals[join_on + ['Site Rate', 'MTD Disc']], how='left', on=join_on)
@@ -1353,6 +1431,8 @@ def get_partner_revenue_report(all1, site_goals, daily_sr):
     # Clean up
     ##########################################################################
 
+    df.loc[df['Price Calculation Type'] == 'CPUV', 'Creative size'] = None  # was 'temp'
+    
     col = ['Site', 'Price Calculation Type', 'Internal Campaign Name', 'Line Description', 'Creative size',
            'Date', 'Impressions/UVs', 'Clicks', 'Estimated Partner Revenue',
            'Adjusted Estimated Partner Revenue', 'Site Rate', 'MTD Disc',

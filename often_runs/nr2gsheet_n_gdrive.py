@@ -17,8 +17,6 @@ def main(year, mo):
         all1 = pickle.load(f)
     with open(DIR_PICKLES + '/' + 'site_goals.pickle', 'rb') as f:
         site_goals = pickle.load(f)
-    with open(DIR_PICKLES + '/' + 'partner_capping_sp_case.pickle', 'rb') as f:
-        partner_capping_sp_case = pickle.load(f)
 
     ############################################################################
     # Main
@@ -26,7 +24,7 @@ def main(year, mo):
 
     now = datetime.now()
 
-    daily_site_report = get_daily_site_report(all1, site_goals, partner_capping_sp_case)
+    daily_site_report = get_daily_site_report(all1, site_goals)
     daily_rev_exp = get_daily_rev_exp(daily_site_report)
     summary_by_site_dict = get_summary_by_site_dict(daily_site_report, site_goals)
 
