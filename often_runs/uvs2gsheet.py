@@ -27,7 +27,8 @@ def main(year, mo):
     monthly_uvs2gsheet_dict['ss name'] = 'Monthly_UVs_' + str(year) + '_' + str(mo).zfill(2)
     monthly_uvs2gsheet_dict['content'] = monthly_uvs
 
-    up_monthly_uvs2gsheet(monthly_uvs2gsheet_dict)
+    gsheet_file_id = up_monthly_uvs2gsheet(monthly_uvs2gsheet_dict)
+    format_monthly_uvs(year, mo, gsheet_file_id)
 
 if __name__ == '__main__':
     year = int(sys.argv[1])

@@ -55,6 +55,7 @@ then
             python nr2gsheet_n_gdrive.py $LASTMONTH_YEAR $LASTMONTH_MONTH
             python clean_gdrive4nr.py
             python check_mapping2gsheet.py $LASTMONTH_YEAR $LASTMONTH_MONTH
+            python uvs2gsheet.py $LASTMONTH_YEAR $LASTMONTH_MONTH
         fi
         python hw_rev_rep2gdrive.py $LASTMONTH_YEAR $LASTMONTH_MONTH
         python clean_gdrive4hw_rev_rep.py

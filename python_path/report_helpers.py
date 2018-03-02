@@ -1,3 +1,4 @@
+from path2pickles import *
 from NEW_helpers import *
 
 import pandas as pd
@@ -5,9 +6,11 @@ import numpy as np
 import re
 
 from datetime import timedelta
+import openpyxl as opx
 
 import os
 import io
+import pickle
 from googleapiclient.http import MediaIoBaseDownload
 
 pd.options.mode.chained_assignment = None  # default='warn'
@@ -1866,14 +1869,42 @@ def get_monthly_uvs(all1, cpuv_goals):
             site_col.append(col)
 
     # Join with CPUV Goals Sheet
-    col = ['BBR', 'Campaign Name', 'Flight Type', 'Start Date', 'End Date', 'Line Description', 'Competitive Conquesting', 'Price Calculation Type', 'Goal']
+    col = ['BBR', 'Campaign Name', 'Flight Type', 'Start Date', 'End Date', 'Line Description', 'Competitive Conquesting', 'Goal']
     goals = cpuv_goals[col]
     combined = pd.merge(goals, uvs, how='left', on=['Campaign Name', 'Line Description'])
 
-    # Reorder columns
+    # Clean up
+    combined[site_col] = combined[site_col].fillna(0)
     combined['Total'] = 0
-    col = ['BBR', 'Campaign Name', 'Flight Type', 'Start Date', 'End Date', 'Line Description', 'Competitive Conquesting', 'Price Calculation Type'] + site_col + ['Total', 'Goal']
-    combined = combined[col]
+    combined['Pacing'] = 0
+
+    header = ['BBR', 'Campaign Name', 'Flight Type', 'Start Date', 'End Date', 'Line Description', 'Competitive Conquesting'] + site_col + ['Total', 'Goal', 'Pacing']
+    combined = combined[header].sort_values(['Campaign Name', 'Line Description']).reset_index(drop=True)
+
+    # Formula columns
+    def col_name2letter(col):
+        idx = header.index(col) + 1
+        return opx.utils.get_column_letter(idx)
+
+    site_col_letter_list = [col_name2letter(col) for col in site_col]
+    total_col_letter = col_name2letter('Total')
+    goal_col_letter = col_name2letter('Goal')
+
+    def get_total_uvs(row):
+        row_index = str(row.name + 2)
+        output = '+'.join([(site_col_letter + row_index) for site_col_letter in site_col_letter_list])
+        output = '=' + output
+        return output
+
+    def get_pacing(row):
+        row_index = str(row.name + 2)
+        output = '=IF(' + total_col_letter + row_index + '>=' + goal_col_letter + row_index + ','
+        output += '"Delivered in Full",'
+        output += '(' + total_col_letter + row_index + '/(DAY(TODAY()) - 1))/(' + goal_col_letter + row_index + '/DAY(EOMONTH(TODAY(),0))))'
+        return output
+
+    combined['Total'] = combined.apply(lambda row: get_total_uvs(row), axis=1)
+    combined['Pacing'] = combined.apply(lambda row: get_pacing(row), axis=1)
 
     return combined
 
@@ -1896,7 +1927,7 @@ def up_monthly_uvs2gsheet(monthly_uvs2gsheet_dict):
         df.to_csv(csv_file_name, index=False)
         file_id = save_csv_as_gsheet_in_gdrive(file_name, folder_id, csv_file_name)
         os.remove(csv_file_name)
-        return
+        return file_id
 
     # Get sheet id
     sheet_name = file_name
@@ -1917,5 +1948,181 @@ def up_monthly_uvs2gsheet(monthly_uvs2gsheet_dict):
     result = service.spreadsheets().values().update(spreadsheetId=ss_id, range=sheet_name,
                                                     valueInputOption='USER_ENTERED',
                                                     body={'values': values}).execute()
-    return None
+    return ss_id
+
+def format_monthly_uvs(year, mo, ss_id):
+
+    service = get_gsheet_service()
+
+    # Find the sheet (name of sheet is the same as name of file)
+    ss_metadata = service.spreadsheets().get(spreadsheetId=ss_id).execute()
+    ss_name = ss_metadata['properties']['title']
+
+    for sheet_metadata in ss_metadata['sheets']:
+        if sheet_metadata['properties']['title'] == ss_name:
+            sheet_id = sheet_metadata['properties']['sheetId']
+
+    # Get values
+    result = service.spreadsheets().values().get(
+        spreadsheetId=ss_id, range=ss_name, valueRenderOption='UNFORMATTED_VALUE').execute()
+    values = result.get('values', [])
+
+    header = values[0]
+    i_sites_start = header.index('Competitive Conquesting') + 1
+    i_campaign = header.index('Campaign Name')
+    i_ld = header.index('Line Description')
+
+    n_row = len(values)
+    n_col = len(header)
+
+    sites = []
+    for i in range(len(header)):
+        if i < i_sites_start:
+            continue
+        if header[i] == 'Total':
+            break
+        sites.append(header[i])
+
+    ###############################################
+    # Color site goals
+    ###############################################
+
+    # Get CPUV goals
+    DIR_PICKLES = PATH2PICKLES + '/' + PREFIX4ALWAYS_UP2DATE + str(year) + '_' + str(mo).zfill(2)
+    with open(DIR_PICKLES + '/' + 'cpuv_goals.pickle', 'rb') as f:
+        cpuv_goals = pickle.load(f)
+
+    # Loop through rows of site delivery columns
+    site2goal_col = {'HL': 'HL Goal', 'Drugs.com': 'Drugs Goal', 'GoodRx': 'GoodRx Goal', 
+                     'Medical News Today': 'MNT Goal', 'Breastcancer.org': 'BCO Goal'}
+
+    def has_goal(campaign, ld, site):
+        row = cpuv_goals[(cpuv_goals['Campaign Name'] == campaign) &
+                         (cpuv_goals['Line Description'] == ld)]
+        if len(row) < 1:
+            return False
+
+        col = site2goal_col[site]
+        if row[col].tolist()[0] > 0:
+            return True
+        return False
+
+    color_values = []
+    color_site_goals = [{'updateCells': {'rows': color_values,
+                                         'fields': 'userEnteredFormat.backgroundColor',
+                                         'range': {'sheetId': sheet_id,
+                                                   'startRowIndex': 1,
+                                                   'endRowIndex': n_row,
+                                                   'startColumnIndex': i_sites_start,
+                                                   'endColumnIndex': i_sites_start + len(sites)}}}]
+
+    white = {'red': 1, 'green': 1, 'blue': 1, 'alpha': 1}
+    grey = {'red': .663, 'green': .663, 'blue': .663, 'alpha': .663}
+    for i in range(1, n_row):
+        row = values[i]
+        color_row = []
+        for j in range(len(sites)):
+            campaign = row[i_campaign]
+            ld = row[i_ld]
+            site = sites[j]
+            if has_goal(campaign, ld, site):
+                bg = white
+            else:
+                bg = grey
+            color_row.append({'userEnteredFormat': {'backgroundColor': bg}})
+        color_values.append({'values': color_row})
+
+    ###############################################
+    # Other formatting 
+    ###############################################
+
+    # Color header
+    green = {'red': .851, 'green': .918, 'blue': .827, 'alpha': 1}
+    color_header = [{'updateCells': {'rows': [{'values': [{'userEnteredFormat': {'backgroundColor': green}}] * n_col}],
+                                     'fields': 'userEnteredFormat.backgroundColor',
+                                     'range': {'sheetId': sheet_id,
+                                               'startRowIndex': 0,
+                                               'endRowIndex': 1,
+                                               'startColumnIndex': 0,
+                                               'endColumnIndex': n_col}}}]
+
+    # Freeze top row
+    freeze = [{'updateSheetProperties': {'properties': {'sheetId': sheet_id,
+                                                        'gridProperties': {'frozenRowCount': 1}},
+                                         'fields': 'gridProperties(frozenRowCount)'}}]
+
+    # Add filter
+    basic_filter = [{'setBasicFilter': {'filter': {'range': {'sheetId': sheet_id,
+                                                   'startRowIndex': 0,
+                                                   'endRowIndex': n_row,
+                                                   'startColumnIndex': 0,
+                                                   'endColumnIndex': n_col}}}}]
+
+    # Wrap header
+    wrap = [{'updateCells': {'rows': [{'values': [{'userEnteredFormat': {'wrapStrategy': 'WRAP'}}] * n_col}],
+                             'fields': 'userEnteredFormat.wrapStrategy',
+                             'range': {'sheetId': sheet_id,
+                                       'startRowIndex': 0,
+                                       'endRowIndex': 1,
+                                       'startColumnIndex': 0,
+                                       'endColumnIndex': n_col}}}]
+
+    # Clip
+    clip = [{'updateCells': {'rows': [{'values': [{'userEnteredFormat': {'wrapStrategy': 'CLIP'}}] * i_sites_start}] * (n_row - 1),
+                             'fields': 'userEnteredFormat.wrapStrategy',
+                             'range': {'sheetId': sheet_id,
+                                       'startRowIndex': 1,
+                                       'endRowIndex': n_row,
+                                       'startColumnIndex': 0,
+                                       'endColumnIndex': i_sites_start}}}]
+
+    # Color grouped
+    yellow = {'red': 1, 'green': .949, 'blue': .8, 'alpha': 1}
+    color_grouped = [{'updateCells': {'rows': [{'values': [{'userEnteredFormat': {'backgroundColor': yellow}}] * 2}] * (n_row - 1),
+                                      'fields': 'userEnteredFormat.backgroundColor',
+                                      'range': {'sheetId': sheet_id,
+                                                'startRowIndex': 1,
+                                                'endRowIndex': n_row,
+                                                'startColumnIndex': header.index('Total'),
+                                                'endColumnIndex': header.index('Goal') + 1}}}]
+
+    # Date formatting
+    date_format = [{'repeatCell': {'range': {'sheetId': sheet_id,
+                                             'startRowIndex': 1,
+                                             'endRowIndex': n_row,
+                                             'startColumnIndex': header.index('Start Date'),
+                                             'endColumnIndex': header.index('End Date') + 1},
+                                  'cell': {'userEnteredFormat': {'numberFormat': {'type': 'DATE',
+                                                                                  'pattern': 'm/d/yyyy'}}},
+                                  'fields': 'userEnteredFormat.numberFormat'}}]
+
+    # Integer formatting
+    int_format = [{'repeatCell': {'range': {'sheetId': sheet_id,
+                                            'startRowIndex': 1,
+                                            'endRowIndex': n_row,
+                                            'startColumnIndex': i_sites_start,
+                                            'endColumnIndex': header.index('Goal') + 1},
+                                  'cell': {'userEnteredFormat': {'numberFormat': {'type': 'NUMBER',
+                                                                                  'pattern': '###,###,##0'}}},
+                                  'fields': 'userEnteredFormat.numberFormat'}}]
+
+    # Percent formatting
+    per_format = [{'repeatCell': {'range': {'sheetId': sheet_id,
+                                            'startRowIndex': 1,
+                                            'endRowIndex': n_row,
+                                            'startColumnIndex': header.index('Pacing'),
+                                            'endColumnIndex': header.index('Pacing') + 1},
+                                  'cell': {'userEnteredFormat': {'numberFormat': {'type': 'NUMBER',
+                                                                                  'pattern': '###,##0.0%'}}},
+                                  'fields': 'userEnteredFormat.numberFormat'}}]
+
+    # Clear all formatting first
+    clear_request = [{'updateCells': {'range': {'sheetId': sheet_id}, 'fields': 'userEnteredFormat'}}]
+    result = service.spreadsheets().batchUpdate(spreadsheetId=ss_id, body={'requests': clear_request}).execute()
+
+    # Send requests
+    requests = color_site_goals + color_header + freeze + basic_filter + wrap + clip + color_grouped + date_format + int_format + per_format
+    result = service.spreadsheets().batchUpdate(spreadsheetId=ss_id, body={'requests': requests}).execute()
+
+
 
