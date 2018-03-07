@@ -455,6 +455,8 @@ def get_cc_uvs(site, mo_year, cpuv_goals_sheet):
         df['Original Report Tab Name'] = site[0] + '_' + gsrange + '_' + col
         output = pd.concat([output, df])
 
+        time.sleep(0.1)  # Sleep to avoid google sheet too-many-requests error
+
     if len(output) == 0:  # Done
         return pd.DataFrame(columns=['Site', 'Original Report Tab Name', 'Date', 'UVs'])
 
@@ -851,6 +853,7 @@ def allergan_report(start_date, end_date):
                        'AG_2017_FY_Restasis Branded Display': 'Restasis',
                        'AG_2017_FY_Viberzi Display': 'Viberzi',
                        'AG_2018_FY_BOTOX CM_D_B_DTC_NA': 'Botox',
+                       'AG_2018_FY_LINZESS_D_B_DTC_NA': 'Linzess',
                        'none': 'Others'}
 
     moat_report['Campaign Label'] = [(campaign_label if isinstance(campaign_label, str) else 'none') for campaign_label
