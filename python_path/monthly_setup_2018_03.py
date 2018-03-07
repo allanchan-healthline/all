@@ -3,10 +3,10 @@ MO_YEAR = (3, 2018)
 
 MONTHLY_SHEET_NAME = {'pas': 'Mar', 'cpuv goals': 'Mar'}
 
-UV_TRACKER_GSHEET = {'Drugs.com': '1hvstKG-Z85ZQx82aC8ew4beERVEmvSqSZvMzofIyP5U',
-                     'HL': '1L2Y_VXmrPV5TkKXoSFyBN8xUVK9BhygEpfkXLsBMYdw',
-                     'MNT': '1L2Y_VXmrPV5TkKXoSFyBN8xUVK9BhygEpfkXLsBMYdw',
-                     'BCO': '1L2Y_VXmrPV5TkKXoSFyBN8xUVK9BhygEpfkXLsBMYdw'}
+UV_TRACKER_GSHEET = {'Drugs.com': '1op1GO2gSO47MqXR_-sMoh-0SmBuB_66Doyg9DzjY5Qo',
+                     'HL': '1dZZPJGYUkBvHlavloWHA4Xw0WkbZNwyyo_GU2vyjzNA',
+                     'MNT': '1dZZPJGYUkBvHlavloWHA4Xw0WkbZNwyyo_GU2vyjzNA',
+                     'BCO': '1dZZPJGYUkBvHlavloWHA4Xw0WkbZNwyyo_GU2vyjzNA'}
 
 LS_CORRECT_RATE_DICT = {}
 
