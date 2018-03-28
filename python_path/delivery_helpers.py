@@ -160,7 +160,7 @@ def get_dfp_last_hour_delivery():
         }
     }
 
-    report_downloader = dfp_client.GetDataDownloader(version='v201702')
+    report_downloader = dfp_client.GetDataDownloader(version='v201705')
     try:
         generated_at = datetime.now(tz=pytz.utc).astimezone(timezone('US/Eastern'))
         report_job_id = report_downloader.WaitForReport(report_job)
@@ -224,7 +224,7 @@ def get_dfp_today_delivery():
         }
     }
 
-    report_downloader = dfp_client.GetDataDownloader(version='v201702')
+    report_downloader = dfp_client.GetDataDownloader(version='v201705')
     try:
         generated_at = datetime.now(tz=pytz.utc).astimezone(timezone('US/Eastern'))
         report_job_id = report_downloader.WaitForReport(report_job)

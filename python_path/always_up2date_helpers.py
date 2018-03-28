@@ -57,7 +57,7 @@ def get_dfp_check(last_delivery_date):
         }
     }
 
-    report_downloader = dfp_client.GetDataDownloader(version='v201702')
+    report_downloader = dfp_client.GetDataDownloader(version='v201705')
     try:
         report_job_id = report_downloader.WaitForReport(report_job)
     except errors.DfpReportError as e:
