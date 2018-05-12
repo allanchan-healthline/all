@@ -72,7 +72,7 @@ def make_bg_as_csv(year, mo):
     das_month = str(mo) + '/' + str(year)
     
     bg = das[das[das_month] != 0]  # Updated to include negative goals. Used to only filter for positive goals.
-    bg = bg[bg['Price Calculation Type'] != 'CPA']
+    #bg = bg[bg['Price Calculation Type'] != 'CPA']  # Include all lines
     bg['Multi-Month Bill Up To'] = das_multimonth_bill_up2_col(bg, year, mo)
 
     ##############################################################
@@ -118,6 +118,7 @@ def make_bg_as_csv(year, mo):
     bg['Total Cost'] = ''
     bg['110%'] = ''
     bg['Discrepancy'] = ''
+    bg['Expense'] = ''
     bg['Third Party Impressions'] = ''
     bg['Check DFA'] = ''
     bg['Overbilling Check'] = ''
@@ -136,9 +137,9 @@ def make_bg_as_csv(year, mo):
 
     header = ['OLI', 'Advertiser', 'Agency', 'Campaign Name', 'Purchase Order / Insertion Order', 'Line Item Number',
               'Placement', 'Rate Type', 'Rate', 'Billed Units', 'Total Cost', 'Booked Impressions', '110%', 'Multi-Month Bill Up To',
-              'Discrepancy', 'First Party Units', 'Third Party Impressions', 'DFA(by ID)', 'Check DFA', 'Third Party System',
+              'Discrepancy', 'Expense', 'First Party Units', 'Third Party Impressions', 'DFA(by ID)', 'Check DFA', 'Third Party System',
               'Goal Breakdown', 'AM', 'CM', 'BBR', 'Expedited Invoice', 'DAS Cost', 'Actual Cost',
-              'DAS v Actual Cost', 'Hit the goal?', 'UD', 'UD $', 'Confirmed?', 'Stage']
+              'DAS v Actual Cost', 'Hit the goal?', 'UD', 'UD $', 'Confirmed?', 'Stage', 'Media Product Family', 'Advertiser Vertical Family']
 
     sortby = ['Advertiser', 'Campaign Name', 'BBR', 'Line Item Number', 'Placement']
 
@@ -257,6 +258,12 @@ def make_bg_as_csv(year, mo):
     bg['Billed Units'] = bg.apply(lambda row: update_billed_units(row), axis=1)
 
     ##############################################################
+    # Enter 0 for delivery for Booked Not Live (Stage)
+    ##############################################################
+
+    bg.loc[bg['Stage'] == 'Booked Not Live', 'Billed Units'] = 0
+
+    ##############################################################
     # Grand Total row
     ##############################################################
 
@@ -269,6 +276,7 @@ def make_bg_as_csv(year, mo):
                               'Booked Impressions',
                               '110%',
                               'Multi-Month Bill Up To',
+                              'Expense',
                               'First Party Units',
                               'Third Party Impressions',
                               'DFA(by ID)',
@@ -1392,7 +1400,8 @@ def make_site_report_as_excel(year, mo, prefix4output):
 
     das_1 = das[das[das_month] > 0][['BBR', 'Campaign Name', 'Flight Type', 'Brand', 'Account Name', 'Agency', 'IO Number', 'Start Date', 'End Date',
                                      'Opportunity Owner', '2nd Opportunity Owner', 'Campaign Manager', 'Line Item Number', 'Line Description', 'Price Calculation Type',
-                                     'Sales Price', 'Base Rate', 'Baked-In Production Rate', das_month, 'Customer Billing ID', 'Customer Billing Name', 'Media Product']]
+                                     'Sales Price', 'Base Rate', 'Baked-In Production Rate', das_month, 'Customer Billing ID', 'Customer Billing Name', 'Media Product', 
+                                     'Media Product Family', 'Advertiser Vertical Family']]
     das_1 = das_1.rename(columns={'Line Description': 'DAS Line Item Name', das_month: 'Total Goal'})
 
     data = data.drop('Price Calculation Type', axis=1)
@@ -1490,7 +1499,8 @@ def make_site_report_as_excel(year, mo, prefix4output):
               'Billed Impressions/UVs', 'Site Goal', 'Adjusted w/ Discrepancy', 'Discrepancy', 'Delivered',
               'Goal Breakdown', 'Total Billable', 'Total Goal', 'Base Rate', 'Gross Site Revenue (Does Not Include Production Fee)',
               'RevShare', 'Net Site Expense', 'Baked-in Production', 'Production Fee', 'Gross Rate',
-              'Gross Revenue (Includes Production Fee)', 'Media Product', 'Own/Partner/DSP', 'HL/HW', 'HCP', 'Parent', 'Agency',
+              'Gross Revenue (Includes Production Fee)', 'Media Product', 'Media Product Family', 'Advertiser Vertical Family', 
+              'Own/Partner/DSP', 'HL/HW', 'HCP', 'Parent', 'Agency',
               'Customer Billing ID', 'Customer Billing Name', 'IO Number', 'Flight Start Date', 'Flight End Date',
               'Sales Contact', 'Billed > Delivered', 'Clicks']
 
