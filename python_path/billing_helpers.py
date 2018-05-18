@@ -74,6 +74,17 @@ def make_bg_as_csv(year, mo):
     bg = das[das[das_month] != 0]  # Updated to include negative goals. Used to only filter for positive goals.
     #bg = bg[bg['Price Calculation Type'] != 'CPA']  # Include all lines
     bg['Multi-Month Bill Up To'] = das_multimonth_bill_up2_col(bg, year, mo)
+    bg['Quarterly Bill Up To'] = das_multimonth_bill_up2_col(bg, year, mo, True)
+
+    # Billing cap note
+    def get_billing_cap_note(row):
+        temp = []
+        for col in ['Flight Type', 'Billing Details']:
+            if row[col] != 'N/A':
+                temp.append(row[col])
+        return ', '.join(temp)
+
+    bg['Goal Breakdown'] = bg.apply(lambda row: get_billing_cap_note(row), axis=1)
 
     ##############################################################
     # Add Expedited Invoice
@@ -93,7 +104,6 @@ def make_bg_as_csv(year, mo):
                    'Price Calculation Type': 'Rate Type', 
                    'Sales Price': 'Rate', 
                    das_month: 'Booked Impressions', 
-                   'Flight Type': 'Goal Breakdown', 
                    'Account Manager': 'AM', 
                    'Campaign Manager': 'CM',
                    'Billable Reporting Source': 'Third Party System'}
@@ -136,7 +146,8 @@ def make_bg_as_csv(year, mo):
     ##############################################################
 
     header = ['OLI', 'Advertiser', 'Agency', 'Campaign Name', 'Purchase Order / Insertion Order', 'Line Item Number',
-              'Placement', 'Rate Type', 'Rate', 'Billed Units', 'Total Cost', 'Booked Impressions', '110%', 'Multi-Month Bill Up To',
+              'Placement', 'Rate Type', 'Rate', 'Billed Units', 'Total Cost', 'Booked Impressions', '110%', 
+              'Quarterly Bill Up To', 'Multi-Month Bill Up To',
               'Discrepancy', 'Expense', 'First Party Units', 'Third Party Impressions', 'DFA(by ID)', 'Check DFA', 'Third Party System',
               'Goal Breakdown', 'AM', 'CM', 'BBR', 'Expedited Invoice', 'DAS Cost', 'Actual Cost',
               'DAS v Actual Cost', 'Hit the goal?', 'UD', 'UD $', 'Confirmed?', 'Stage', 'Media Product Family', 'Advertiser Vertical Family']
@@ -158,6 +169,7 @@ def make_bg_as_csv(year, mo):
     col_booked_imps = col_name2col_letter('Booked Impressions')
     col_first_party_units = col_name2col_letter('First Party Units')
     col_110 = col_name2col_letter('110%')
+    col_quarterly_billupto = col_name2col_letter('Quarterly Bill Up To')
     col_multimonth_billupto = col_name2col_letter('Multi-Month Bill Up To')
     col_third_party_imps = col_name2col_letter('Third Party Impressions')
     col_rate_type = col_name2col_letter('Rate Type')
@@ -174,9 +186,9 @@ def make_bg_as_csv(year, mo):
         row = str(i + 2)
         output = '=ROUND(IF(OR(' + col_third_party_system + row + '="DFP", ' + col_third_party_system + row + '="The Trade Desk"), '
         output += 'IF(' + col_goal_breakdown + row + '="Monthly", MIN(' + col_booked_imps + row + ', ' + col_first_party_units + row + '), '
-        output += 'MIN(' + col_110 + row + ', ' + col_multimonth_billupto + row + ', ' + col_first_party_units + row + ')), '
+        output += 'MIN(' + col_110 + row + ', ' + col_quarterly_billupto + row + ', ' + col_multimonth_billupto + row + ', ' + col_first_party_units + row + ')), '
         output += 'IF(' + col_goal_breakdown + row + '="Monthly", MIN(' + col_booked_imps + row + ', ' + col_third_party_imps + row + '), '
-        output += 'MIN(' + col_110 + row + ', ' + col_multimonth_billupto + row + ', ' + col_third_party_imps + row + '))), 0)'
+        output += 'MIN(' + col_110 + row + ', ' + col_quarterly_billupto + row + ', ' + col_multimonth_billupto + row + ', ' + col_third_party_imps + row + '))), 0)'
         return output
 
     def get_total_cost(i):
@@ -185,10 +197,6 @@ def make_bg_as_csv(year, mo):
         output += col_billed_units + row + '/1000*' + col_rate + row + ', '
         output += col_billed_units + row + '*' + col_rate + row + ')'
         return output
-
-    def get_110(i):
-        row = str(i + 2)
-        return '=IF(' + col_goal_breakdown + row + '<>"Monthly", ' + col_booked_imps + row + '*1.1, "")'
 
     def get_das_cost(i):
         row = str(i + 2)
@@ -241,9 +249,18 @@ def make_bg_as_csv(year, mo):
             return row['Booked Impressions']
         return row['Billed Units']
 
+    def get_110(row):
+        str_row = str(row.name + 2)
+        if 'Bill on actual up to line total' in row['Goal Breakdown']:
+            return 'N/A'
+        if 'Bill on actual up to quarterly line total' in row['Goal Breakdown']:
+            return 'N/A'
+        if 'Multi-Month' in row['Goal Breakdown']:
+            return '=' + col_booked_imps + str_row + '*1.1'
+        return ''
+
     bg['Billed Units'] = [get_billed_units(i) for i in range(len(bg))]
     bg['Total Cost'] = [get_total_cost(i) for i in range(len(bg))]
-    bg['110%'] = [get_110(i) for i in range(len(bg))]
     bg['DAS Cost'] = [get_das_cost(i) for i in range(len(bg))]
     bg['Actual Cost'] = [get_actual_cost(i) for i in range(len(bg))]
     bg['DAS v Actual Cost'] = [get_dasvactual_cost(i) for i in range(len(bg))]
@@ -256,6 +273,7 @@ def make_bg_as_csv(year, mo):
     # Not same for all rows
     bg.loc[bg['Rate Type'] != 'CPM', ('Discrepancy', 'Check DFA')] = ('', '')
     bg['Billed Units'] = bg.apply(lambda row: update_billed_units(row), axis=1)
+    bg['110%'] = bg.apply(lambda row: get_110(row), axis=1)
 
     ##############################################################
     # Enter 0 for delivery for Booked Not Live (Stage)
@@ -274,7 +292,8 @@ def make_bg_as_csv(year, mo):
     subtotal_col_name_list = ['Billed Units',
                               'Total Cost',
                               'Booked Impressions',
-                              '110%',
+                              '110%', 
+                              'Quarterly Bill Up To',
                               'Multi-Month Bill Up To',
                               'Expense',
                               'First Party Units',
@@ -1108,7 +1127,7 @@ def make_site_report_as_excel(year, mo, prefix4output):
     today_date = datetime.now().date()
     today_date_str = str(today_date.month).zfill(2) + str(today_date.day).zfill(2) + str(today_date.year)
 
-    months_dict = {1: 'January', 2: 'Febuary', 3: 'March', 4: 'April', 5: 'May', 6: 'June',
+    months_dict = {1: 'January', 2: 'February', 3: 'March', 4: 'April', 5: 'May', 6: 'June',
                    7: 'July', 8: 'August', 9: 'September', 10: 'October', 11: 'November', 12: 'December'}
 
     output_file_name = prefix4output + '_' + months_dict[mo] + '_' + str(year) + '_Site_Report_' + today_date_str + '.xlsx'
@@ -1460,20 +1479,8 @@ def make_site_report_as_excel(year, mo, prefix4output):
     # Additional labeling
     ##############################################################
 
-    data['HCP'] = ''
-    data['HL/HW'] = 'HW'
-    data['Own/Partner/DSP'] = ''
-
-    # Label HCP
-    data.loc[pd.notnull(data['Campaign Name']) & data['Campaign Name'].str.contains('HCP', case=False), 'HCP'] = 'HCP'
-
-    # Add HL/HW
-    data.loc[(data['Site'] == 'HL') | (data['Site'] == 'Medical News Today'), 'HL/HW'] = 'HL'
-
-    # Add HL/Partner/DSP
-    data.loc[(data['Site'] == 'HL') | (data['Site'] == 'Medical News Today'), 'Own/Partner/DSP'] = 'Own'
-    data.loc[data['Campaign Manager'] == 'SEM', 'Own/Partner/DSP'] = 'DSP'
-    data.loc[data['Own/Partner/DSP'] == '', 'Own/Partner/DSP'] = 'Partner'
+    data['HL/HW'] = ''  # Add formula later
+    data['Own/Partner/DSP'] = ''  # Add formula later
 
     ##############################################################
     # Add columns to be calculated (Want formulas in Excel)
@@ -1500,7 +1507,7 @@ def make_site_report_as_excel(year, mo, prefix4output):
               'Goal Breakdown', 'Total Billable', 'Total Goal', 'Base Rate', 'Gross Site Revenue (Does Not Include Production Fee)',
               'RevShare', 'Net Site Expense', 'Baked-in Production', 'Production Fee', 'Gross Rate',
               'Gross Revenue (Includes Production Fee)', 'Media Product', 'Media Product Family', 'Advertiser Vertical Family', 
-              'Own/Partner/DSP', 'HL/HW', 'HCP', 'Parent', 'Agency',
+              'Own/Partner/DSP', 'HL/HW', 'Parent', 'Agency',
               'Customer Billing ID', 'Customer Billing Name', 'IO Number', 'Flight Start Date', 'Flight End Date',
               'Sales Contact', 'Billed > Delivered', 'Clicks']
 
@@ -1517,6 +1524,7 @@ def make_site_report_as_excel(year, mo, prefix4output):
         return opx.utils.get_column_letter(col_num)
 
     col_unit = col_name2col_letter('Unit')
+    col_site = col_name2col_letter('Site')
     col_billed = col_name2col_letter('Billed Impressions/UVs')
     col_base_rate = col_name2col_letter('Base Rate')
     col_prod_rate = col_name2col_letter('Baked-in Production')
@@ -1550,11 +1558,28 @@ def make_site_report_as_excel(year, mo, prefix4output):
         output = '=' + col_billed + row + '*' + col_prod_rate + row
         return output
 
+    def get_gross_rate(i):
+        row = str(i + 2)
+        output = '=' + col_base_rate + row + '+' + col_prod_rate + row
+        return output
+
     def get_gross_rev_w_prod(i):
         row = str(i + 2)
         output = '=IF(' + col_unit + row + '="CPM", '
         output += col_billed + row + '/1000*' + col_gross_rate + row + ', '
         output += col_billed + row + '*' + col_gross_rate + row + ')'
+        return output
+
+    def get_own_partner_dsp(i):
+        row = str(i + 2)
+        output = '=IF(OR(' + col_site + row + '="HL", ' + col_site + row + '="Medical News Today"), "Own", '
+        output += 'IF(OR(' + col_site + row + '="AdWords", ' + col_site + row + '="AppNexus", ' + col_site + row + '="Facebook", ' + col_site + row + '="TradeDesk"), "DSP", '
+        output += '"Partner"))'
+        return output
+
+    def get_hlhw(i):
+        row = str(i + 2)
+        output = '=IF(OR(' + col_site + row + '="HL", ' + col_site + row + '="Medical News Today"), "HL", "HW")'
         return output
 
     def get_billed_gt_delivered(i):
@@ -1566,7 +1591,10 @@ def make_site_report_as_excel(year, mo, prefix4output):
     data['Gross Site Revenue (Does Not Include Production Fee)'] = [get_gross_rev_wo_prod(i) for i in range(len(data))]
     data['Net Site Expense'] = data.apply(lambda row: get_expense(row), axis=1)
     data['Production Fee'] = [get_prod_fee(i) for i in range(len(data))]
+    data['Gross Rate'] = [get_gross_rate(i) for i in range(len(data))]
     data['Gross Revenue (Includes Production Fee)'] = [get_gross_rev_w_prod(i) for i in range(len(data))]
+    data['Own/Partner/DSP'] = [get_own_partner_dsp(i) for i in range(len(data))]
+    data['HL/HW'] = [get_hlhw(i) for i in range(len(data))]
     data['Billed > Delivered'] = [get_billed_gt_delivered(i) for i in range(len(data))]
 
     ##############################################################

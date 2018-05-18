@@ -17,11 +17,12 @@ python send2adjuster.py
 
 A=-1
 D=-1
-P=-1
+#P=-1
 Y=-1
 
 COUNT=0
-while [[ $A != 0 || $D != 0 || $P != 0 || $Y != 0 ]]
+#while [[ $A != 0 || $D != 0 || $P != 0 || $Y != 0 ]]
+while [[ $A != 0 || $D != 0 || $Y != 0 ]]
 do
     echo "$(date '+%Y-%m-%d-%H-%M-%S') While loop COUNT=${COUNT} Start" >> $LOG_FILE_NAME
     if [ $A != 0 ] 
@@ -36,11 +37,11 @@ do
         D=$?
     fi
 
-    if [ $P != 0 ]
-    then
-        python p2_reports4gdrive.py
-        P=$?
-    fi
+#    if [ $P != 0 ]
+#    then
+#        python p2_reports4gdrive.py
+#        P=$?
+#    fi
 
     if [ $Y != 0 ]
     then
@@ -49,7 +50,8 @@ do
     fi
 
     # Break out of loop if all is good
-    if [[ $A == 0 && $D == 0 && $P == 0 && $Y == 0 ]]
+    #if [[ $A == 0 && $D == 0 && $P == 0 && $Y == 0 ]]
+    if [[ $A == 0 && $D == 0 && $Y == 0 ]]
     then
         break
     fi

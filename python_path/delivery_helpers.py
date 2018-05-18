@@ -839,6 +839,7 @@ def allergan_report(start_date, end_date):
     moat_report['Device'] = ''
     moat_report.loc[moat_report['Placement Label'].str.contains('_Al_', case=False), 'Device'] = 'Desktop & Tablet'
     moat_report.loc[moat_report['Placement Label'].str.contains('_MW', case=False), 'Device'] = 'Mobile'
+    moat_report.loc[moat_report['Placement Label'].str.contains('_MO_', case=False), 'Device'] = 'Mobile'
 
     # Add Advertiser
     dict_advertiser = {'AG_2016_FY_Botox CM Branded Display': 'Others',

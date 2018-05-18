@@ -181,7 +181,7 @@ def get_daily_per_pl_st_delivery(all1, site_goals, clicks=False):
 # Add billable
 ###################################################################
 
-def das_multimonth_bill_up2_col(das, year, mo):
+def das_multimonth_bill_up2_col(das, year, mo, quarter=False):
     das = das.copy()
     das_header = das.columns.tolist()
     month_list = []
@@ -190,24 +190,41 @@ def das_multimonth_bill_up2_col(das, year, mo):
             month_list.append(col)
 
     months2add = []
-    for month in month_list:
-        (mo_, year_) = month.split('/')
-        mo_ = int(mo_)
-        year_ = int(year_)
-        if year_ < year:
-            continue
-        elif year_ > year:
-            months2add.append(month)
-        elif mo_ >= mo:
+    if not quarter:
+        for month in month_list:
+            (mo_, year_) = month.split('/')
+            mo_ = int(mo_)
+            year_ = int(year_)
+            if year_ < year:
+                continue
+            elif year_ > year:
+                months2add.append(month)
+            elif mo_ >= mo:
                 months2add.append(month)
 
-    for month in months2add:
-        das[month].fillna(0, inplace=True)
+        for month in months2add:
+            das[month].fillna(0, inplace=True)
 
-    das['Multi-Month Bill Up To'] = das.apply(lambda row: sum(round(row[month], 0) for month in months2add), axis=1)
-    das.loc[das['Flight Type'] == 'Monthly', 'Multi-Month Bill Up To'] = ''
+        das['Multi-Month Bill Up To'] = das.apply(lambda row: sum(round(row[month], 0) for month in months2add), axis=1)
+        das.loc[(das['Flight Type'] == 'Monthly') & (das['Billing Details'] == 'N/A'), 'Multi-Month Bill Up To'] = ''
 
-    return das['Multi-Month Bill Up To']
+        return das['Multi-Month Bill Up To']
+
+    else:
+        num_mo_left_in_quarter = mo % 3
+        months2add.append('/'.join([str(mo), str(year)]))
+        if num_mo_left_in_quarter >= 1:
+            months2add.append('/'.join([str(mo + 1), str(year)]))
+        if num_mo_left_in_quarter == 1:
+            months2add.append('/'.join([str(mo + 2), str(year)]))
+
+        for month in months2add:
+            das[month].fillna(0, inplace=True)
+
+        das['Quarterly Bill Up To'] = das.apply(lambda row: sum(round(row[month], 0) for month in months2add), axis=1)
+        das.loc[das['Billing Details'] != 'Bill on actual up to quarterly line total', 'Quarterly Bill Up To'] = ''
+
+        return das['Quarterly Bill Up To']
 
 def das_max_billable_col(das, year, mo):
     das = das.copy()
