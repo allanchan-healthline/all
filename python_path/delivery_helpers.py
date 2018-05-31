@@ -45,10 +45,10 @@ def run_dfp_mtd_all_query(last_delivery_date):
     client = dfp.DfpClient.LoadFromStorage(os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + "/googleads.yaml")
 
     # Initialize appropriate service.
-    report_service = client.GetService('ReportService', version='v201705')
+    report_service = client.GetService('ReportService', version='v201708')
 
     # Initialize a DataDownloader.
-    report_downloader = client.GetDataDownloader(version='v201705')
+    report_downloader = client.GetDataDownloader(version='v201708')
 
     # Create statement object to filter for an order.
     values = [{'key': 'id',
@@ -160,7 +160,7 @@ def get_dfp_last_hour_delivery():
         }
     }
 
-    report_downloader = dfp_client.GetDataDownloader(version='v201705')
+    report_downloader = dfp_client.GetDataDownloader(version='v201708')
     try:
         generated_at = datetime.now(tz=pytz.utc).astimezone(timezone('US/Eastern'))
         report_job_id = report_downloader.WaitForReport(report_job)
@@ -224,7 +224,7 @@ def get_dfp_today_delivery():
         }
     }
 
-    report_downloader = dfp_client.GetDataDownloader(version='v201705')
+    report_downloader = dfp_client.GetDataDownloader(version='v201708')
     try:
         generated_at = datetime.now(tz=pytz.utc).astimezone(timezone('US/Eastern'))
         report_job_id = report_downloader.WaitForReport(report_job)
@@ -402,6 +402,8 @@ def get_microsite_uvs(site, mo_year, gsheet_file_id, cpuv_goals_sheet):
     year = mo_year[1]
     month_start_date = date(year, mo, 1)
     month_end_date = start_end_month(month_start_date)[1]
+
+    uv_df.to_csv('uv_df.csv')  # TEST
 
     uv_df['Date'] = [datetime.strptime(d, '%m/%d/%Y').date() for d in uv_df['Date']]
     uv_df = uv_df[(uv_df['Date'] >= month_start_date) & (uv_df['Date'] <= month_end_date)]
@@ -1031,10 +1033,10 @@ def get_dcm_placement_ids(end_date):
     client = dfp.DfpClient.LoadFromStorage(os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + "/googleads.yaml")
 
     # Initialize appropriate service.
-    report_service = client.GetService('ReportService', version='v201705')
+    report_service = client.GetService('ReportService', version='v201708')
 
     # Initialize a DataDownloader.
-    report_downloader = client.GetDataDownloader(version='v201705')
+    report_downloader = client.GetDataDownloader(version='v201708')
 
     # Create statement object to filter for an order.
     values = [{'key': 'id',
@@ -1116,10 +1118,10 @@ def run_dfp_mtd_ask_tp_query(year, mo):
     client = dfp.DfpClient.LoadFromStorage(os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + "/googleads.yaml")
 
     # Initialize appropriate service.
-    report_service = client.GetService('ReportService', version='v201705')
+    report_service = client.GetService('ReportService', version='v201708')
 
     # Initialize a DataDownloader.
-    report_downloader = client.GetDataDownloader(version='v201705')
+    report_downloader = client.GetDataDownloader(version='v201708')
 
     # Create statement object to filter for an order.
     values = [{'key': 'id',

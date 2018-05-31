@@ -1,4 +1,4 @@
-from monthly_setup_2018_05 import *
+from monthly_setup_2018_06 import *
 
 from NEW_helpers import *
 from always_up2date_helpers import *
