@@ -403,8 +403,6 @@ def get_microsite_uvs(site, mo_year, gsheet_file_id, cpuv_goals_sheet):
     month_start_date = date(year, mo, 1)
     month_end_date = start_end_month(month_start_date)[1]
 
-    uv_df.to_csv('uv_df.csv')  # TEST
-
     uv_df['Date'] = [datetime.strptime(d, '%m/%d/%Y').date() for d in uv_df['Date']]
     uv_df = uv_df[(uv_df['Date'] >= month_start_date) & (uv_df['Date'] <= month_end_date)]
 

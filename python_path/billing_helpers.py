@@ -150,7 +150,7 @@ def make_bg_as_csv(year, mo):
               'Quarterly Bill Up To', 'Multi-Month Bill Up To',
               'Discrepancy', 'Expense', 'First Party Units', 'Third Party Impressions', 'DFA(by ID)', 'Check DFA', 'Third Party System',
               'Goal Breakdown', 'AM', 'CM', 'BBR', 'Expedited Invoice', 'DAS Cost', 'Actual Cost',
-              'DAS v Actual Cost', 'Hit the goal?', 'UD', 'UD $', 'Confirmed?', 'Stage', 'Media Product Family', 'Advertiser Vertical Family']
+              'DAS v Actual Cost', 'Hit the goal?', 'UD', 'UD $', 'Confirmed?', 'Stage', 'Budget Category', 'Media Product Family', 'Advertiser Vertical Family']
 
     sortby = ['Advertiser', 'Campaign Name', 'BBR', 'Line Item Number', 'Placement']
 
@@ -1420,7 +1420,7 @@ def make_site_report_as_excel(year, mo, prefix4output):
     das_1 = das[das[das_month] > 0][['BBR', 'Campaign Name', 'Flight Type', 'Brand', 'Account Name', 'Agency', 'IO Number', 'Start Date', 'End Date',
                                      'Opportunity Owner', '2nd Opportunity Owner', 'Campaign Manager', 'Line Item Number', 'Line Description', 'Price Calculation Type',
                                      'Sales Price', 'Base Rate', 'Baked-In Production Rate', das_month, 'Customer Billing ID', 'Customer Billing Name', 'Media Product', 
-                                     'Media Product Family', 'Advertiser Vertical Family']]
+                                     'Media Product Family', 'Advertiser Vertical Family', 'Budget Category']]
     das_1 = das_1.rename(columns={'Line Description': 'DAS Line Item Name', das_month: 'Total Goal'})
 
     data = data.drop('Price Calculation Type', axis=1)
@@ -1506,7 +1506,7 @@ def make_site_report_as_excel(year, mo, prefix4output):
               'Billed Impressions/UVs', 'Site Goal', 'Adjusted w/ Discrepancy', 'Discrepancy', 'Delivered',
               'Goal Breakdown', 'Total Billable', 'Total Goal', 'Base Rate', 'Gross Site Revenue (Does Not Include Production Fee)',
               'RevShare', 'Net Site Expense', 'Baked-in Production', 'Production Fee', 'Gross Rate',
-              'Gross Revenue (Includes Production Fee)', 'Media Product', 'Media Product Family', 'Advertiser Vertical Family', 
+              'Gross Revenue (Includes Production Fee)', 'Budget Category', 'Media Product', 'Media Product Family', 'Advertiser Vertical Family', 
               'Own/Partner/DSP', 'HL/HW', 'Parent', 'Agency',
               'Customer Billing ID', 'Customer Billing Name', 'IO Number', 'Flight Start Date', 'Flight End Date',
               'Sales Contact', 'Billed > Delivered', 'Clicks']
