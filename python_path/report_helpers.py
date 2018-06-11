@@ -205,7 +205,7 @@ def das_multimonth_bill_up2_col(das, year, mo, quarter=False):
         for month in months2add:
             das[month].fillna(0, inplace=True)
 
-        das['Multi-Month Bill Up To'] = das.apply(lambda row: sum(round(row[month], 0) for month in months2add), axis=1)
+        das['Multi-Month Bill Up To'] = das.apply(lambda row: round(sum((0 if isinstance(row[month], str) else row[month]) for month in months2add), 0), axis=1)
         das.loc[(das['Flight Type'] == 'Monthly') & (das['Billing Details'] == 'N/A'), 'Multi-Month Bill Up To'] = ''
 
         return das['Multi-Month Bill Up To']
@@ -221,7 +221,7 @@ def das_multimonth_bill_up2_col(das, year, mo, quarter=False):
         for month in months2add:
             das[month].fillna(0, inplace=True)
 
-        das['Quarterly Bill Up To'] = das.apply(lambda row: sum(round(row[month], 0) for month in months2add), axis=1)
+        das['Quarterly Bill Up To'] = das.apply(lambda row: round(sum((0 if isinstance(row[month], str) else row[month]) for month in months2add), 0), axis=1)
         das.loc[das['Billing Details'] != 'Bill on actual up to quarterly line total', 'Quarterly Bill Up To'] = ''
 
         return das['Quarterly Bill Up To']

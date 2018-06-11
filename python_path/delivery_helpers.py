@@ -451,7 +451,11 @@ def get_cc_uvs(site, mo_year, cpuv_goals_sheet):
         df.columns = df.iloc[0]
         df = df[1:].reset_index(drop=True)
 
-        df = df[['Date', col]].rename(columns={col: 'UVs'})
+        try:
+            df = df[['Date', col]].rename(columns={col: 'UVs'})
+        except:
+            print('OOpsy! Error on tab: ' + gsrange)
+
         df['Original Report Tab Name'] = site[0] + '_' + gsrange + '_' + col
         output = pd.concat([output, df])
 

@@ -83,7 +83,7 @@ def get_salesforce_login_info():
     security_token = 'wq3nA7vy9zD9AllhVMgMAacHQ'
     return (username, password, security_token)
 
-def make_das(use_scheduled_units=False, export=False):
+def make_das(use_scheduled_units=False, export=False, for_bg=False):
     """Return DAS report as a dataframe.
 
     If use_scheduled_units is True, then it uses Scheduled Units in Salesforce. If False, then it uses
@@ -120,7 +120,10 @@ def make_das(use_scheduled_units=False, export=False):
 
     for col in ['Sales Price', 'Base Rate', 'Baked-In Production Rate', 'Total Price', 'Total Units',
                 'Scheduled Units', 'Actual Units', 'Contracted Amount', 'Actual Amount']:
-        sf_das.loc[sf_das[col] == 'N/A', col] = 0
+        if for_bg and (col in ['Actual Units', 'Actual Amount']):
+            pass
+        else:
+            sf_das.loc[sf_das[col] == 'N/A', col] = 0
 
     #3. Pivot to create monthly Actual Units columns
     index_list = ['BBR', 'Campaign Name', 'Flight Type', 'Brand: Brand Name', 'Account Name: Account Name', 'Agency: Account Name',
@@ -131,14 +134,20 @@ def make_das(use_scheduled_units=False, export=False):
                   'Contracted Sites', 'Contracted Devices', 'Line Item Number', 'OLI', 'Billable Reporting Source',
                   'Viewability Source', 'Viewability', 'Blocking System', 'Line Description', 'Contracted Sizes', 'Price Calculation Type',
                   'Sales Price', 'Base Rate', 'Baked-In Production Rate', 'Total Price', 'Total Units']
+    # Fill value
+    if for_bg:
+        fill_value = 'N/A'
+    else:
+        fill_value = 0
+
     if use_scheduled_units:
         try:
-            das = pd.pivot_table(sf_das, index=index_list, columns=['Active Month'], values='Scheduled Units', fill_value=0, aggfunc=np.sum)
+            das = pd.pivot_table(sf_das, index=index_list, columns=['Active Month'], values='Scheduled Units', fill_value=fill_value, aggfunc=np.sum)
         except KeyError as e:
             print('data error: {}'.format(e))
     else:
         try:
-            das = pd.pivot_table(sf_das, index=index_list, columns=['Active Month'], values='Actual Units', fill_value=0, aggfunc=np.sum)
+            das = pd.pivot_table(sf_das, index=index_list, columns=['Active Month'], values='Actual Units', fill_value=fill_value, aggfunc=np.sum)
         except KeyError as e:
             print('data error: {}'.format(e))
     das = das.reset_index()

@@ -68,11 +68,10 @@ def make_bg_as_csv(year, mo):
     # Select Billing Grid data from DAS
     ##############################################################
 
-    das = make_das(use_scheduled_units=False, export=False)
+    das = make_das(use_scheduled_units=False, export=False, for_bg=True)
     das_month = str(mo) + '/' + str(year)
-    
-    bg = das[das[das_month] != 0]  # Updated to include negative goals. Used to only filter for positive goals.
-    #bg = bg[bg['Price Calculation Type'] != 'CPA']  # Include all lines
+   
+    bg = das[das[das_month] != 'N/A']  # Updated to include negative goals. Used to only filter for positive goals.
     bg['Multi-Month Bill Up To'] = das_multimonth_bill_up2_col(bg, year, mo)
     bg['Quarterly Bill Up To'] = das_multimonth_bill_up2_col(bg, year, mo, True)
 
