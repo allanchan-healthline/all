@@ -436,10 +436,9 @@ def format_bg(file_id):
 
     # Add a filter view per cm
     i_cm = header.index('CM')
-    cms = []
+    cms = set()
     for i in range(1, len(values)-1):
-        cms.append(values[i][i_cm])
-    cms = set(cms)
+        cms.add(values[i][i_cm])
 
     filter_views = []
     for cm in cms:
@@ -667,8 +666,25 @@ def add_cpuv_me2bg_gsheet(year, mo, bg_ss_id):
                                             'properties': {'pixelSize': 75},
                                             'fields': 'pixelSize'}}]
 
+    # Add comments on some header cells
+    col_comment = {'Delivery': 'Actual delivery of paid UVs (will reflect any over-delivery)\n\n(The maximum delivery for the AV line is its specific goal)',
+                   'Delivery (Paid + AV)': 'Actual delivery of paid + AV UVs (will reflect any over-delivery)\n\nIn this column, "0" is entered in the AV line.',
+                   'Goal (Paid + AV)': 'Contracted paid + AV UVs',
+                   'Goal': 'Contracted paid UVs'}
+
+    comment = []
+    for col in col_comment:
+        col_index = header.index(col)
+        comment.append({'repeatCell': {'range': {'sheetId': sheet_id,
+                                                 'startRowIndex': 0,
+                                                 'endRowIndex': 1,
+                                                 'startColumnIndex': col_index,
+                                                 'endColumnIndex': col_index + 1},
+                                       'cell': {'note': col_comment[col]},
+                                       'fields': 'note'}})
+
     # Send all requests
-    requests = freeze + wrap + color + font + value_formatting + basic_filter + width
+    requests = freeze + wrap + color + font + value_formatting + basic_filter + width + comment
     result = service.spreadsheets().batchUpdate(spreadsheetId=bg_ss_id, body={'requests': requests}).execute()
 
     return
