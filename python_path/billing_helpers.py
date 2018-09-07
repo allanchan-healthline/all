@@ -763,6 +763,8 @@ def adjust_unfinalized_bg(bg):
         billed = row['Billed Units']
         booked = row['Booked Impressions']
 
+        if row['Rate Type'] == 'Flat-fee':
+            return billed
         if system == 'DFP':
             return billed
         if (third is None) or (third == ''):
@@ -1432,7 +1434,7 @@ def make_site_report_as_excel(year, mo, prefix4output):
     das_month = str(mo) + '/' + str(year)
     das = make_das(use_scheduled_units=True, export=False)
 
-    das_1 = das[das[das_month] > 0][['BBR', 'Campaign Name', 'Flight Type', 'Brand', 'Account Name', 'Agency', 'IO Number', 'Start Date', 'End Date',
+    das_1 = das[das[das_month] > 0][['OLI', 'BBR', 'Campaign Name', 'Flight Type', 'Brand', 'Account Name', 'Agency', 'IO Number', 'Start Date', 'End Date',
                                      'Opportunity Owner', '2nd Opportunity Owner', 'Campaign Manager', 'Line Item Number', 'Line Description', 'Price Calculation Type',
                                      'Sales Price', 'Base Rate', 'Baked-In Production Rate', das_month, 'Customer Billing ID', 'Customer Billing Name', 'Media Product', 
                                      'Media Product Family', 'Advertiser Vertical Family', 'Budget Category']]
@@ -1517,7 +1519,7 @@ def make_site_report_as_excel(year, mo, prefix4output):
                    'End Date': 'Flight End Date', 'Flight Type': 'Goal Breakdown',
                    'Account Name': 'Parent', 'Total Billed': 'Total Billable'}
 
-    header = ['Finalized?', 'BBR #', 'Advertiser', 'Campaign Name', 'Unit', 'Line Item #', 'Line Item Name', 'Site',
+    header = ['Finalized?', 'OLI', 'BBR #', 'Advertiser', 'Campaign Name', 'Unit', 'Line Item #', 'Line Item Name', 'Site',
               'Billed Impressions/UVs', 'Site Goal', 'Adjusted w/ Discrepancy', 'Discrepancy', 'Delivered',
               'Goal Breakdown', 'Total Billable', 'Total Goal', 'Base Rate', 'Gross Site Revenue (Does Not Include Production Fee)',
               'RevShare', 'Net Site Expense', 'Baked-in Production', 'Production Fee', 'Gross Rate',

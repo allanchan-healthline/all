@@ -57,7 +57,7 @@ def get_dfp_check(last_delivery_date):
         }
     }
 
-    report_downloader = dfp_client.GetDataDownloader(version='v201708')
+    report_downloader = dfp_client.GetDataDownloader(version='v201805')
     try:
         report_job_id = report_downloader.WaitForReport(report_job)
     except errors.DfpReportError as e:
@@ -587,13 +587,13 @@ def get_site_goals(mo_year, pas_sheet, cpuv_goals_sheet, ls_correct_rate_dict,
                   (goals['DAS Line Item Name'] == ld),
                   'Non-standard Site Rate'] = rate
 
-    ## Drugs CPUV CC 30 cents for 2017, 40 cents for 2018
-    drugs_cc_cpuv = 0.4
+    ## Drugs CPUV CC 30 cents for 2017, 40 cents for 2018, 50 cents since July 2018
+    drugs_cc_cpuv = 0.5
     if mo_year[0] == 2017:
         drugs_cc_cpuv = 0.3
     
     goals.loc[(goals['Price Calculation Type'] == 'CPUV') &
-              (goals['DAS Line Item Name'].str.contains('Competitive Conquesting')) &
+              (goals['DAS Line Item Name'].str.contains('Competitive Conquesting') | goals['DAS Line Item Name'].str.contains('Brand Championing')) &
               (goals['Site'] == 'Drugs.com'), 'Non-standard Site Rate'] = drugs_cc_cpuv
 
     ## Patient Info

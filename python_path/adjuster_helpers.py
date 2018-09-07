@@ -187,10 +187,10 @@ def get_dfp_map(start_date, end_date):
     client = dfp.DfpClient.LoadFromStorage(os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + "/googleads.yaml")
 
     # Initialize appropriate service.
-    report_service = client.GetService('ReportService', version='v201708')
+    report_service = client.GetService('ReportService', version='v201805')
 
     # Initialize a DataDownloader.
-    report_downloader = client.GetDataDownloader(version='v201708')
+    report_downloader = client.GetDataDownloader(version='v201805')
 
     # Create statement object to filter for an order.
     values = [{'key': 'id',

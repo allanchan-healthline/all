@@ -45,10 +45,10 @@ def run_dfp_mtd_all_query(last_delivery_date):
     client = dfp.DfpClient.LoadFromStorage(os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + "/googleads.yaml")
 
     # Initialize appropriate service.
-    report_service = client.GetService('ReportService', version='v201708')
+    report_service = client.GetService('ReportService', version='v201805')
 
     # Initialize a DataDownloader.
-    report_downloader = client.GetDataDownloader(version='v201708')
+    report_downloader = client.GetDataDownloader(version='v201805')
 
     # Create statement object to filter for an order.
     values = [{'key': 'id',
@@ -160,7 +160,7 @@ def get_dfp_last_hour_delivery():
         }
     }
 
-    report_downloader = dfp_client.GetDataDownloader(version='v201708')
+    report_downloader = dfp_client.GetDataDownloader(version='v201805')
     try:
         generated_at = datetime.now(tz=pytz.utc).astimezone(timezone('US/Eastern'))
         report_job_id = report_downloader.WaitForReport(report_job)
@@ -224,7 +224,7 @@ def get_dfp_today_delivery():
         }
     }
 
-    report_downloader = dfp_client.GetDataDownloader(version='v201708')
+    report_downloader = dfp_client.GetDataDownloader(version='v201805')
     try:
         generated_at = datetime.now(tz=pytz.utc).astimezone(timezone('US/Eastern'))
         report_job_id = report_downloader.WaitForReport(report_job)
@@ -675,6 +675,10 @@ def dcm_reporting(start_date, end_date):
 
                 except client.AccessTokenRefreshError:
                     print('The credentials have been revoked or expired, please re-run the application to re-authorize')
+
+                except:
+                    print('Delete failed for profile ' + profile_id)
+
         j += 1
 
     ##5. Delete files with no data, and create a file with all data
@@ -1035,10 +1039,10 @@ def get_dcm_placement_ids(end_date):
     client = dfp.DfpClient.LoadFromStorage(os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + "/googleads.yaml")
 
     # Initialize appropriate service.
-    report_service = client.GetService('ReportService', version='v201708')
+    report_service = client.GetService('ReportService', version='v201805')
 
     # Initialize a DataDownloader.
-    report_downloader = client.GetDataDownloader(version='v201708')
+    report_downloader = client.GetDataDownloader(version='v201805')
 
     # Create statement object to filter for an order.
     values = [{'key': 'id',
@@ -1120,10 +1124,10 @@ def run_dfp_mtd_ask_tp_query(year, mo):
     client = dfp.DfpClient.LoadFromStorage(os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + "/googleads.yaml")
 
     # Initialize appropriate service.
-    report_service = client.GetService('ReportService', version='v201708')
+    report_service = client.GetService('ReportService', version='v201805')
 
     # Initialize a DataDownloader.
-    report_downloader = client.GetDataDownloader(version='v201708')
+    report_downloader = client.GetDataDownloader(version='v201805')
 
     # Create statement object to filter for an order.
     values = [{'key': 'id',
