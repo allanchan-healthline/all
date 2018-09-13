@@ -983,16 +983,29 @@ def get_pacing_report_dict(all1, site_goals):
 
     pacing['Need 2b On Pace'] = pacing.apply(lambda row: add_need_2b_on_pace(row), axis=1)
 
-    # Prep for pacing based on projection
+    ###################################################################
+    # Projections, 2 versions
+    ###################################################################
+
     daily_delivery = get_daily_per_pl_delivery(all1, site_goals)
     projection = get_projection(daily_delivery, delivery_col='Adjusted w/ Discrepancy',
                                 groupby_col=['BBR', 'Brand', 'DAS Line Item Name'],
                                 date_col='Date', last_delivery_date=last_delivery_date)
-    projection = projection.rename(columns={'DAS Line Item Name': 'Line Description'})
-
+    projection = projection.rename(columns={'DAS Line Item Name': 'Line Description', 'Projected Delivery': 'Projected Delivery_7'})
     join_on = ['BBR', 'Brand', 'Line Description']
     pacing = pd.merge(pacing, projection, how='left', on=join_on)
-    pacing.loc[pd.isnull(pacing['Projected Delivery']), 'Projected Delivery'] = 0
+    pacing.loc[pd.isnull(pacing['Projected Delivery_7']), 'Projected Delivery_7'] = 0
+
+    def add_ave_daily_delivery_projection(row):
+        if row['Past Days'] == 0:
+            return 'Not started yet'
+        return row['Adjusted w/ Discrepancy'] / row['Past Days'] * row['Days']
+
+    pacing['Projected Delivery'] = pacing.apply(lambda row: add_ave_daily_delivery_projection(row), axis=1)
+
+    ###################################################################
+    # Pacing, 2 versions
+    ###################################################################
 
     # Main
     def add_pacing(row, divident_col, divider_col):
@@ -1008,13 +1021,13 @@ def get_pacing_report_dict(all1, site_goals):
         lambda row: add_pacing(row, 'Adjusted w/ Discrepancy', 'Need 2b On Pace'), axis=1)
 
     pacing['Pacing_7'] = pacing.apply(
-        lambda row: add_pacing(row, 'Projected Delivery', 'Goal'), axis=1)
+        lambda row: add_pacing(row, 'Projected Delivery_7', 'Goal'), axis=1)
 
     ###################################################################
     # RA, 2 versions
     ###################################################################
 
-    def add_ra(row, pacing_col):
+    def add_ra(row, pacing_col, return_dollar_amount):
         if row['Campaign Manager'] == 'SEM':
             return 0
         if row['Stage'] == 'Booked Not Live':
@@ -1024,14 +1037,21 @@ def get_pacing_report_dict(all1, site_goals):
         price_type = row['Price Calculation Type']
         if row[pacing_col] < 1.0:
             if price_type == 'CPM':
-                return (1.0 - row[pacing_col]) * row['Goal'] / 1000 * row['Sales Price']
+                if return_dollar_amount:
+                    return (1.0 - row[pacing_col]) * row['Goal'] / 1000 * row['Sales Price']
+                else:
+                    return (1.0 - row[pacing_col]) * row['Goal']
             if price_type == 'CPUV':
-                return (1.0 - row[pacing_col]) * row['Goal'] * row['Sales Price']
+                if return_dollar_amount:
+                    return (1.0 - row[pacing_col]) * row['Goal'] * row['Sales Price']
+                else:
+                    return (1.0 - row[pacing_col]) * row['Goal']
         return 0
 
-    pacing['RA'] = pacing.apply(lambda row: add_ra(row, 'Pacing'), axis=1)
-
-    pacing['RA_7'] = pacing.apply(lambda row: add_ra(row, 'Pacing_7'), axis=1)
+    pacing['$RA'] = pacing.apply(lambda row: add_ra(row, 'Pacing', True), axis=1)
+    pacing['$RA_7'] = pacing.apply(lambda row: add_ra(row, 'Pacing_7', True), axis=1)
+    pacing['RA'] = pacing.apply(lambda row: add_ra(row, 'Pacing', False), axis=1)
+    pacing['RA_7'] = pacing.apply(lambda row: add_ra(row, 'Pacing_7', False), axis=1)
 
     ###################################################################
     # Hit goal & UD
@@ -1060,9 +1080,12 @@ def get_pacing_report_dict(all1, site_goals):
     ###################################################################
 
     col = ['Stage', 'BBR', 'Campaign Name', 'Line Item Number', 'Line Description',
-           'Price Calculation Type', 'Sales Price', 'Hit the Goal', 'BNL', 'RA', 'RA_7', 'UD',
-           'Rollover Units', 'Rollover Amount', 'Pacing', 'Pacing_7', 'Account Manager',
-           'Campaign Manager']
+           'Price Calculation Type', 'Start Date', 'End Date', 'Sales Price', 'Goal', 
+           'Hit the Goal', 
+           'Projected Delivery', 'RA', '$RA', 'Pacing',
+           'Projected Delivery_7', 'RA_7', '$RA_7', 'Pacing_7', 
+           'BNL', 'UD', 'Rollover Units', 'Rollover Amount',
+           'Account Manager', 'Campaign Manager']
     sortby = ['Campaign Name', 'BBR', 'Line Item Number']
 
     pacing = pacing[col].sort_values(sortby)
