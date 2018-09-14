@@ -21,6 +21,7 @@ LASTMONTH_YEAR=$(date -d "$YEAR-$MONTH-15 last month" '+%Y')
 LASTMONTH_MONTH=$(date -d "$YEAR-$MONTH-15 last month" '+%m')
 
 python bg2gsheet.py $LASTMONTH_YEAR $LASTMONTH_MONTH
+python ytd_monthly_dcm.py
 
 # Logging
 LOG_END_TIME=$(date '+%Y-%m-%d-%H-%M-%S')
