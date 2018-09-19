@@ -1909,7 +1909,7 @@ def get_monthly_uvs(all1, cpuv_goals):
             site_col.append(col)
 
     # Join with CPUV Goals Sheet
-    col = ['BBR', 'Campaign Name', 'Flight Type', 'Start Date', 'End Date', 'Line Description', 'Competitive Conquesting', 'Goal']
+    col = ['BBR', 'Campaign Name', 'Start Date', 'End Date', 'Line Description', 'Competitive Conquesting', 'Goal']
     goals = cpuv_goals[col]
     combined = pd.merge(goals, uvs, how='left', on=['Campaign Name', 'Line Description'])
 
@@ -1918,7 +1918,7 @@ def get_monthly_uvs(all1, cpuv_goals):
     combined['Total'] = 0
     combined['Pacing'] = 0
 
-    header = ['BBR', 'Campaign Name', 'Flight Type', 'Start Date', 'End Date', 'Line Description', 'Competitive Conquesting'] + site_col + ['Total', 'Goal', 'Pacing']
+    header = ['BBR', 'Campaign Name', 'Start Date', 'End Date', 'Line Description', 'Competitive Conquesting'] + site_col + ['Total', 'Goal', 'Pacing']
     combined = combined[header].sort_values(['Campaign Name', 'Line Description']).reset_index(drop=True)
 
     # Formula columns
