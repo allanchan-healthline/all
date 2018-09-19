@@ -2165,4 +2165,7 @@ def format_monthly_uvs(year, mo, ss_id):
     result = service.spreadsheets().batchUpdate(spreadsheetId=ss_id, body={'requests': requests}).execute()
 
 
-
+def get_dcm_grouped_offsite_retargeting(dcm):
+    df = dcm[dcm['Placement'].str.contains('offsite', case=False) & dcm['Placement'].str.contains('retargeting', case=False)]
+    df = df[['Campaign', 'Impressions']].groupby('Campaign').sum().reset_index()
+    return df
