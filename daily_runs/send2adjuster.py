@@ -8,8 +8,8 @@ from datetime import datetime
 
 ####################################################################
 username = 'kumiko.kashii@healthline.com'
-password = 'Eggplant123'
-security_token = 'wq3nA7vy9zD9AllhVMgMAacHQ'
+password = 'data007team'
+security_token = '1nT42QawFDRq1iR3p5agqy8d1'
 ####################################################################
 
 ####################################################################
