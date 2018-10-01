@@ -514,7 +514,7 @@ def add_cpuv_me2bg_gsheet(year, mo, bg_ss_id):
         if ('Goal' in col) & (col not in ['Goal', 'Goal Check', 'Max at Goal']):
             site_goal_col_list.append(col)
 
-    me = cpuv_goals[['OLI', 'BBR', 'Campaign Name', 'Line Description', 'Price Calculation Type', '1st Line Item', 'Goal'] + site_goal_col_list]
+    me = cpuv_goals[['OLI', 'BBR', 'Campaign Name', 'Line Description', '1st Line Item', 'Goal'] + site_goal_col_list]
 
     # Columns to add
     site_delivery_col_list = [col.replace(' Goal', ' Delivery') for col in site_goal_col_list]
@@ -526,7 +526,7 @@ def add_cpuv_me2bg_gsheet(year, mo, bg_ss_id):
     for col in site_goal_col_list:
         me.loc[me[col] == 0, col] = ''
 
-    header = ['OLI', 'BBR', 'Campaign Name', 'Line Description', 'Price Calculation Type', 'Hit the Goal?', '1st Line Item',
+    header = ['OLI', 'BBR', 'Campaign Name', 'Line Description', 'Hit the Goal?', '1st Line Item',
               'Delivery', 'Delivery (Paid + AV)', 'Goal (Paid + AV)', 'Goal']
 
     for i in range(len(site_goal_col_list)):
