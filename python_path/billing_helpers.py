@@ -721,7 +721,7 @@ def update_bg_cpuv_formulas(file_id):
         
         # First Party Units
         cell = sheet_name + '!' + col_letter_fpu + i_row
-        value = "=IFERROR(VLOOKUP(" + col_letter_oli + i_row + ",'CPUV ME'!$A:$H,8,false), 0)"
+        value = "=IFERROR(VLOOKUP(" + col_letter_oli + i_row + ",'CPUV ME'!$A:$G,7,false), 0)"
         upload_data.append({'range': cell, 'majorDimension': 'ROWS', 'values': [[value]]})
 
         # Third Party Units
