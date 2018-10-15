@@ -52,7 +52,8 @@ def make_bg_as_csv(year, mo):
     # DCM imps
     ##############################################################
 
-    all_data, profiles_df, grouped_all_data = dcm_reporting(start_date, end_date)
+    all_data, profiles_df, grouped_all_data = dcm_reporting(start_date, '2018-10-14')  # TEMP
+    #all_data, profiles_df, grouped_all_data = dcm_reporting(start_date, end_date)  # REAL
 
     groupby_col = ['Placement ID']
     value_col = ['Impressions']
@@ -184,9 +185,12 @@ def make_bg_as_csv(year, mo):
     def get_billed_units(i):
         row = str(i + 2)
         output = '=ROUND(IF(OR(' + col_third_party_system + row + '="DFP", ' + col_third_party_system + row + '="The Trade Desk"), '
-        output += 'IF(' + col_goal_breakdown + row + '="Monthly", MIN(' + col_booked_imps + row + ', ' + col_first_party_units + row + '), '
+        #output += 'IF(' + col_goal_breakdown + row + '="Monthly", MIN(' + col_booked_imps + row + ', ' + col_first_party_units + row + '), '
+        output += 'IF(ISNUMBER(SEARCH("Monthly", ' + col_goal_breakdown + row + ')), MIN(' + col_booked_imps + row + ', ' + col_first_party_units + row + '), '
+
         output += 'MIN(' + col_110 + row + ', ' + col_quarterly_billupto + row + ', ' + col_multimonth_billupto + row + ', ' + col_first_party_units + row + ')), '
-        output += 'IF(' + col_goal_breakdown + row + '="Monthly", MIN(' + col_booked_imps + row + ', ' + col_third_party_imps + row + '), '
+        #output += 'IF(' + col_goal_breakdown + row + '="Monthly", MIN(' + col_booked_imps + row + ', ' + col_third_party_imps + row + '), '
+        output += 'IF(ISNUMBER(SEARCH("Monthly", ' + col_goal_breakdown + row + ')), MIN(' + col_booked_imps + row + ', ' + col_third_party_imps + row + '), '
         output += 'MIN(' + col_110 + row + ', ' + col_quarterly_billupto + row + ', ' + col_multimonth_billupto + row + ', ' + col_third_party_imps + row + '))), 0)'
         return output
 
